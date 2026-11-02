@@ -149,14 +149,17 @@ export function AppLayout() {
                 <Bell className="size-4" />
                 <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-400" />
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b14]">
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger
+                  className="inline-flex shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b14]"
+                  nativeButton={false}
+                >
                   <Avatar className="cursor-pointer">
                     <AvatarImage src={user?.photoURL ?? undefined} />
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-48">
+                <DropdownMenuContent align="end" sideOffset={8} className="min-w-48">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
