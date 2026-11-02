@@ -20,7 +20,7 @@ type PageKey = "landing" | "wallet"
 
 const data = {
   navMain: [
-    { id: "landing", title: "Home", icon: Home, to: "/" },
+    { id: "landing", title: "Home", icon: Home, to: "/dashboard" },
     { id: "wallet", title: "Wallet", icon: Wallet, to: "/wallet" },
   ],
 } as const
@@ -41,7 +41,10 @@ export function AppSidebar({
             <SidebarMenuButton
               size="lg"
               render={
-                <NavLink to="/" onClick={() => setOpenMobile(false)} />
+                <NavLink
+                  to="/dashboard"
+                  onClick={() => setOpenMobile(false)}
+                />
               }
             >
               <div className="flex aspect-square size-10 items-center justify-center">
