@@ -38,16 +38,19 @@ export function AppSidebar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <NavLink to="/" onClick={() => setOpenMobile(false)}>
-                <div className="flex aspect-square size-10 items-center justify-center">
-                  <img src="/logo.png" className="size-10" alt="ChainScope" />
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="text-xl font-bold">ChainScope</span>
-                  <span className="">v1.0.0</span>
-                </div>
-              </NavLink>
+            <SidebarMenuButton
+              size="lg"
+              render={
+                <NavLink to="/" onClick={() => setOpenMobile(false)} />
+              }
+            >
+              <div className="flex aspect-square size-10 items-center justify-center">
+                <img src="/logo.png" className="size-10" alt="ChainScope" />
+              </div>
+              <div className="flex flex-col gap-0.5 leading-none">
+                <span className="text-xl font-bold">ChainScope</span>
+                <span className="">v1.0.0</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
