@@ -1,8 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom"
+import { useActiveAccount } from "thirdweb/react"
 import { useAuth } from "@/context/AuthContext"
 
 export function ProtectedRoute() {
   const { user, loading } = useAuth()
+  const account = useActiveAccount()
 
   if (loading) {
     return (
@@ -12,7 +14,8 @@ export function ProtectedRoute() {
     )
   }
 
-  if (!user) {
+  // Allow access if Firebase user OR thirdweb wallet is connected
+  if (!user && !account) {
     return <Navigate to="/login" replace />
   }
 
