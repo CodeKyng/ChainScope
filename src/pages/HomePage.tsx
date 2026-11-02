@@ -8,7 +8,8 @@ import {
   Shield,
   Wallet,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "cn"
 import ethereumLogo from "@/assets/ethereum.png"
 import solanaLogo from "@/assets/solana.png"
 import baseLogo from "@/assets/Base.png"
@@ -74,22 +75,25 @@ export default function HomePage() {
           </Link>
 
           <nav className="flex items-center gap-2 sm:gap-3">
-            <Button
-              asChild
-              variant="ghost"
-              className="text-slate-300 hover:bg-slate-800 hover:text-white"
+            <Link
+              to="/login"
+              className={cn(
+                buttonVariants({ variant: "ghost" }),
+                "text-slate-300 hover:bg-slate-800 hover:text-white"
+              )}
             >
-              <Link to="/login">Log in</Link>
-            </Button>
-            <Button
-              asChild
-              className="bg-indigo-500 text-white hover:bg-indigo-400"
+              Log in
+            </Link>
+            <Link
+              to="/signup"
+              className={cn(
+                buttonVariants({ variant: "default" }),
+                "bg-indigo-500 text-white hover:bg-indigo-400"
+              )}
             >
-              <Link to="/signup">
-                Get started
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
+              Get started
+              <ArrowRight className="size-4" />
+            </Link>
           </nav>
         </div>
       </header>
@@ -113,24 +117,25 @@ export default function HomePage() {
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-indigo-500 px-5 text-white hover:bg-indigo-400"
+                <Link
+                  to="/signup"
+                  className={cn(
+                    buttonVariants({ variant: "default", size: "lg" }),
+                    "bg-indigo-500 px-5 text-white hover:bg-indigo-400"
+                  )}
                 >
-                  <Link to="/signup">
-                    Create free account
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-slate-700 bg-slate-900/50 text-slate-200 hover:bg-slate-800"
+                  Create free account
+                  <ArrowRight className="size-4" />
+                </Link>
+                <Link
+                  to="/login"
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "lg" }),
+                    "border-slate-700 bg-slate-900/50 text-slate-200 hover:bg-slate-800"
+                  )}
                 >
-                  <Link to="/login">I already have an account</Link>
-                </Button>
+                  I already have an account
+                </Link>
               </div>
 
               <div className="mt-10">
@@ -219,24 +224,25 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-indigo-500 text-white hover:bg-indigo-400"
+                <Link
+                  to="/signup"
+                  className={cn(
+                    buttonVariants({ variant: "default", size: "lg" }),
+                    "bg-indigo-500 text-white hover:bg-indigo-400"
+                  )}
                 >
-                  <Link to="/signup">
-                    Get started free
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-slate-700 bg-transparent text-slate-200 hover:bg-slate-800"
+                  Get started free
+                  <ArrowRight className="size-4" />
+                </Link>
+                <Link
+                  to="/login"
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "lg" }),
+                    "border-slate-700 bg-transparent text-slate-200 hover:bg-slate-800"
+                  )}
                 >
-                  <Link to="/login">Log in</Link>
-                </Button>
+                  Log in
+                </Link>
               </div>
             </div>
           </div>
