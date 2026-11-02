@@ -1,4 +1,9 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
+import {
+  useActiveAccount,
+  useActiveWallet,
+  useDisconnect,
+} from "thirdweb/react"
 import { AppSidebar } from "@/components/appSidebar"
 import {
   SidebarInset,
@@ -45,26 +50,54 @@ const items = [
   { label: "Polygon", value: "polygon", logo: polygonLogo },
 ]
 
+function shortAddress(address: string) {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
 export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const account = useActiveAccount()
+  const wallet = useActiveWallet()
+  const { disconnect } = useDisconnect()
 
   const currentPage =
     location.pathname === "/wallet" ? "wallet" : ("landing" as const)
 
   const handleLogout = async () => {
-    await logout()
+    try {
+      if (wallet) {
+        await disconnect(wallet)
+      }
+    } catch {
+      // ignore disconnect errors
+    }
+    try {
+      await logout()
+    } catch {
+      // ignore if no Firebase session
+    }
     navigate("/")
   }
 
-  const displayName = user?.displayName || user?.email?.split("@")[0] || "User"
-  const initials = displayName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase()
+  const displayName =
+    user?.displayName ||
+    user?.email?.split("@")[0] ||
+    (account?.address ? shortAddress(account.address) : "User")
+
+  const subtitle = user?.email || (account?.address ? account.address : null)
+
+  const initials = user
+    ? displayName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : account?.address
+      ? account.address.slice(2, 4).toUpperCase()
+      : "U"
 
   return (
     <SidebarProvider className="dark bg-[#070b14] text-slate-100">
@@ -129,9 +162,9 @@ export function AppLayout() {
                       <p className="text-sm font-medium leading-none">
                         {displayName}
                       </p>
-                      {user?.email && (
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {user.email}
+                      {subtitle && (
+                        <p className="max-w-[200px] truncate text-xs leading-none text-muted-foreground">
+                          {subtitle}
                         </p>
                       )}
                     </div>
