@@ -43,7 +43,7 @@ export function SignupForm({
     setLoading(true)
     try {
       await signup(email, password, name)
-      navigate("/")
+      navigate("/dashboard")
     } catch (err: unknown) {
       const message =
         err instanceof Error
