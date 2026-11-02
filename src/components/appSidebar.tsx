@@ -1,5 +1,15 @@
 import * as React from "react"
-import { Home, Wallet } from "lucide-react"
+import {
+  Bell,
+  Compass,
+  Home,
+  Network,
+  Settings,
+  Shield,
+  Star,
+  UserCog,
+  Wallet,
+} from "lucide-react"
 import { NavLink } from "react-router-dom"
 
 import { NavMain } from "@/components/nav-main"
@@ -15,15 +25,39 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/context/AuthContext"
+import { isAdminEmail } from "@/lib/roles"
 
-type PageKey = "landing" | "wallet"
+export type PageKey =
+  | "landing"
+  | "wallet"
+  | "explore"
+  | "watchlist"
+  | "alerts"
+  | "settings"
+  | "admin"
+  | "admin-users"
+  | "admin-networks"
 
-const data = {
-  navMain: [
-    { id: "landing", title: "Home", icon: Home, to: "/dashboard" },
-    { id: "wallet", title: "Wallet", icon: Wallet, to: "/wallet" },
-  ],
-} as const
+const userNav = [
+  { id: "landing", title: "Home", icon: Home, to: "/dashboard" },
+  { id: "wallet", title: "Wallets", icon: Wallet, to: "/wallet" },
+  { id: "explore", title: "Explore", icon: Compass, to: "/explore" },
+  { id: "watchlist", title: "Watchlist", icon: Star, to: "/watchlist" },
+  { id: "alerts", title: "Alerts", icon: Bell, to: "/alerts" },
+  { id: "settings", title: "Settings", icon: Settings, to: "/settings" },
+] as const
+
+const adminNav = [
+  { id: "admin", title: "Admin overview", icon: Shield, to: "/admin" },
+  { id: "admin-users", title: "Users", icon: UserCog, to: "/admin/users" },
+  {
+    id: "admin-networks",
+    title: "Networks",
+    icon: Network,
+    to: "/admin/networks",
+  },
+] as const
 
 export function AppSidebar({
   currentPage,
@@ -32,6 +66,8 @@ export function AppSidebar({
   currentPage?: PageKey
 }) {
   const { setOpenMobile } = useSidebar()
+  const { user } = useAuth()
+  const showAdmin = isAdminEmail(user?.email)
 
   return (
     <Sidebar {...props}>
@@ -59,7 +95,10 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} currentPage={currentPage} />
+        <NavMain items={userNav} currentPage={currentPage} />
+        {showAdmin && (
+          <NavMain items={adminNav} currentPage={currentPage} />
+        )}
       </SidebarContent>
       <SidebarFooter>
         <div className="p-1">
