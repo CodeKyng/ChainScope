@@ -36,14 +36,17 @@ export function NavMain({
           return (
             <SidebarMenuItem key={item.id}>
               <SidebarMenuButton
-                asChild
                 isActive={currentPage === item.id}
                 className="flex w-full items-center gap-2"
+                render={
+                  <NavLink
+                    to={item.to}
+                    onClick={() => setOpenMobile(false)}
+                  />
+                }
               >
-                <NavLink to={item.to} onClick={() => setOpenMobile(false)}>
-                  {Icon ? <Icon className="size-4" /> : null}
-                  <span>{item.title}</span>
-                </NavLink>
+                {Icon ? <Icon className="size-4" /> : null}
+                <span>{item.title}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )
