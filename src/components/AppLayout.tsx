@@ -47,7 +47,7 @@ export function AppLayout() {
 
   const handleLogout = async () => {
     await logout()
-    navigate("/login")
+    navigate("/")
   }
 
   const displayName = user?.displayName || user?.email?.split("@")[0] || "User"
