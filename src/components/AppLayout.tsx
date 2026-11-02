@@ -60,6 +60,7 @@ function pageFromPath(pathname: string): PageKey {
   if (pathname.startsWith("/admin")) return "admin"
   if (pathname.startsWith("/wallet")) return "wallet"
   if (pathname.startsWith("/explore")) return "explore"
+  if (pathname.startsWith("/marketplace")) return "marketplace"
   if (pathname.startsWith("/watchlist")) return "watchlist"
   if (pathname.startsWith("/alerts")) return "alerts"
   if (pathname.startsWith("/settings")) return "settings"
