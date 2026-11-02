@@ -5,8 +5,9 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { CheckIcon, ChevronRightIcon } from "lucide-react"
 import { cn } from "cn"
 
-function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
-  return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+function DropdownMenu({ modal = false, ...props }: MenuPrimitive.Root.Props) {
+  // modal=false avoids body scroll-lock / layout shift that collapses the sidebar
+  return <MenuPrimitive.Root data-slot="dropdown-menu" modal={modal} {...props} />
 }
 
 function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
@@ -23,6 +24,7 @@ function DropdownMenuContent({
   side = "bottom",
   sideOffset = 4,
   className,
+  children,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
@@ -33,6 +35,7 @@ function DropdownMenuContent({
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
         className="isolate z-50 outline-none"
+        style={{ position: "fixed" }}
         align={align}
         alignOffset={alignOffset}
         side={side}
@@ -45,7 +48,9 @@ function DropdownMenuContent({
             className
           )}
           {...props}
-        />
+        >
+          <MenuPrimitive.List className="outline-none">{children}</MenuPrimitive.List>
+        </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>
   )
