@@ -1,0 +1,134 @@
+import { Outlet, useLocation, useNavigate } from "react-router-dom"
+import { AppSidebar } from "@/components/appSidebar"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import ethereumLogo from "@/assets/ethereum.png"
+import solanaLogo from "@/assets/solana.png"
+import baseLogo from "@/assets/Base.png"
+import arbitrumLogo from "@/assets/arbitrum.png"
+import polygonLogo from "@/assets/Polygon.png"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import { Bell, LogOut, Search } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/context/AuthContext"
+
+const items = [
+  { label: "Ethereum", value: "ethereum", logo: ethereumLogo },
+  { label: "Base", value: "base", logo: baseLogo },
+  { label: "Arbitrum", value: "arbitrum", logo: arbitrumLogo },
+  { label: "Solana", value: "solana", logo: solanaLogo },
+  { label: "Polygon", value: "polygon", logo: polygonLogo },
+]
+
+export function AppLayout() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
+
+  const currentPage =
+    location.pathname === "/wallet" ? "wallet" : ("landing" as const)
+
+  const handleLogout = async () => {
+    await logout()
+    navigate("/login")
+  }
+
+  const displayName = user?.displayName || user?.email?.split("@")[0] || "User"
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+
+  return (
+    <SidebarProvider className="dark bg-[#070b14] text-slate-100">
+      <AppSidebar currentPage={currentPage} />
+      <SidebarInset className="bg-[#070b14]">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-800/80 bg-[#070b14] px-4 text-slate-100">
+          <SidebarTrigger className="mr-4 -ml-1" />
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-3 text-sm text-muted-foreground">
+            <div className="font-medium text-foreground">
+              <InputGroup className="w-full border-slate-700 bg-slate-900/70 sm:w-lg">
+                <InputGroupAddon>
+                  <Search />
+                </InputGroupAddon>
+                <InputGroupInput
+                  className="text-xs placeholder:text-slate-500"
+                  placeholder="Search wallet address, ENS, tokens or collection..."
+                />
+              </InputGroup>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Select items={items}>
+                <SelectTrigger className="h-8 w-32 border-slate-700 bg-slate-900/70 text-xs sm:w-36">
+                  <SelectValue placeholder="Pick a Network ..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Networks</SelectLabel>
+                    {items.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        <span className="flex items-center gap-2">
+                          <img
+                            src={item.logo}
+                            alt={item.label}
+                            className="size-4 rounded-full object-cover"
+                          />
+                          {item.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Notifications"
+                className="relative text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                <Bell className="size-4" />
+                <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-400" />
+              </Button>
+              <Avatar>
+                <AvatarImage src={user?.photoURL ?? undefined} />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Log out"
+                onClick={handleLogout}
+                className="text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1">
+          <Outlet />
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
+  )
+}
