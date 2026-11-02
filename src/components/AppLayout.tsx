@@ -27,6 +27,14 @@ import {
 import { Bell, LogOut, Search } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/context/AuthContext"
 
 const items = [
@@ -108,19 +116,37 @@ export function AppLayout() {
                 <Bell className="size-4" />
                 <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-400" />
               </Button>
-              <Avatar>
-                <AvatarImage src={user?.photoURL ?? undefined} />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Log out"
-                onClick={handleLogout}
-                className="text-slate-300 hover:bg-slate-800 hover:text-white"
-              >
-                <LogOut className="size-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b14]">
+                  <Avatar className="cursor-pointer">
+                    <AvatarImage src={user?.photoURL ?? undefined} />
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-48">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {displayName}
+                      </p>
+                      {user?.email && (
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user.email}
+                        </p>
+                      )}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={handleLogout}
+                    className="cursor-pointer"
+                  >
+                    <LogOut className="size-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
