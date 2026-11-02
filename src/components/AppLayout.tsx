@@ -4,7 +4,7 @@ import {
   useActiveWallet,
   useDisconnect,
 } from "thirdweb/react"
-import { AppSidebar } from "@/components/appSidebar"
+import { AppSidebar, type PageKey } from "@/components/appSidebar"
 import {
   SidebarInset,
   SidebarProvider,
@@ -54,6 +54,18 @@ function shortAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
+function pageFromPath(pathname: string): PageKey {
+  if (pathname.startsWith("/admin/users")) return "admin-users"
+  if (pathname.startsWith("/admin/networks")) return "admin-networks"
+  if (pathname.startsWith("/admin")) return "admin"
+  if (pathname.startsWith("/wallet")) return "wallet"
+  if (pathname.startsWith("/explore")) return "explore"
+  if (pathname.startsWith("/watchlist")) return "watchlist"
+  if (pathname.startsWith("/alerts")) return "alerts"
+  if (pathname.startsWith("/settings")) return "settings"
+  return "landing"
+}
+
 export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -62,8 +74,7 @@ export function AppLayout() {
   const wallet = useActiveWallet()
   const { disconnect } = useDisconnect()
 
-  const currentPage =
-    location.pathname === "/wallet" ? "wallet" : ("landing" as const)
+  const currentPage = pageFromPath(location.pathname)
 
   const handleLogout = async () => {
     try {
