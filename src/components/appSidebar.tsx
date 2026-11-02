@@ -6,6 +6,7 @@ import {
   Network,
   Settings,
   Shield,
+  ShoppingBag,
   Star,
   UserCog,
   Wallet,
@@ -32,6 +33,7 @@ export type PageKey =
   | "landing"
   | "wallet"
   | "explore"
+  | "marketplace"
   | "watchlist"
   | "alerts"
   | "settings"
@@ -43,6 +45,12 @@ const userNav = [
   { id: "landing", title: "Home", icon: Home, to: "/dashboard" },
   { id: "wallet", title: "Wallets", icon: Wallet, to: "/wallet" },
   { id: "explore", title: "Explore", icon: Compass, to: "/explore" },
+  {
+    id: "marketplace",
+    title: "Marketplace",
+    icon: ShoppingBag,
+    to: "/marketplace",
+  },
   { id: "watchlist", title: "Watchlist", icon: Star, to: "/watchlist" },
   { id: "alerts", title: "Alerts", icon: Bell, to: "/alerts" },
   { id: "settings", title: "Settings", icon: Settings, to: "/settings" },
