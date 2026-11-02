@@ -10,6 +10,7 @@ import ExplorePage from "@/pages/ExplorePage"
 import WatchlistPage from "@/pages/WatchlistPage"
 import AlertsPage from "@/pages/AlertsPage"
 import SettingsPage from "@/pages/SettingsPage"
+import MarketplacePage from "@/pages/MarketplacePage"
 import LoginPage from "@/pages/LoginPage"
 import SignupPage from "@/pages/SignupPage"
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage"
@@ -32,6 +33,7 @@ export function App() {
               <Route path="/dashboard" element={<LandingPage />} />
               <Route path="/wallet" element={<WalletPage />} />
               <Route path="/explore" element={<ExplorePage />} />
+              <Route path="/marketplace" element={<MarketplacePage />} />
               <Route path="/watchlist" element={<WatchlistPage />} />
               <Route path="/alerts" element={<AlertsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
