@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AuthProvider } from "@/context/AuthContext"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { AppLayout } from "@/components/AppLayout"
+import HomePage from "@/pages/HomePage"
 import LandingPage from "@/pages/LandingPage"
 import WalletPage from "@/pages/WalletPage"
 import LoginPage from "@/pages/LoginPage"
@@ -12,14 +13,15 @@ export function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Public auth routes */}
+          {/* Public routes */}
+          <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
           {/* Protected app routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              <Route path="/" element={<LandingPage />} />
+              <Route path="/dashboard" element={<LandingPage />} />
               <Route path="/wallet" element={<WalletPage />} />
             </Route>
           </Route>
