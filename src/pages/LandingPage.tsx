@@ -4,6 +4,7 @@ import { useActiveAccount } from "thirdweb/react"
 import {
   ArrowDownLeft,
   ArrowLeftRight,
+  ArrowRight,
   ArrowUpRight,
   Bell,
   Check,
@@ -539,6 +540,3 @@ export default function LandingPage() {
     </div>
   )
 }
-
-// local import for ArrowRight used in shortcuts
-import { ArrowRight } from "lucide-react"
