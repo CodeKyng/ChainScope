@@ -1,14 +1,11 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useActiveAccount } from "thirdweb/react"
 import {
   ArrowDownLeft,
   ArrowLeftRight,
-  ArrowRight,
   ArrowUpRight,
-  Bell,
   Check,
-  ChevronRight,
   Copy,
-  Eye,
   Plus,
   Search,
   Star,
@@ -17,7 +14,6 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -26,34 +22,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import arbitrumLogo from "@/assets/arbitrum.png"
-import baseLogo from "@/assets/Base.png"
-import ethereumLogo from "@/assets/ethereum.png"
-import solanaLogo from "@/assets/solana.png"
-
-const networks = [
-  { name: "Ethereum", value: "ethereum", logo: ethereumLogo },
-  { name: "Base", value: "base", logo: baseLogo },
-  { name: "Arbitrum", value: "arbitrum", logo: arbitrumLogo },
-  { name: "Solana", value: "solana", logo: solanaLogo },
-]
+import { useNetwork } from "@/context/NetworkContext"
+import { NETWORKS, getNetwork, type NetworkId } from "@/lib/networks"
+import { cn } from "cn"
 
 type WalletItem = {
-  id: number
+  id: string
   name: string
   address: string
-  network: string
+  fullAddress?: string
+  network: NetworkId
   balance: number
   change: string
   favorite: boolean
   initials: string
   avatar: string
   primary?: boolean
+  connected?: boolean
 }
 
-const startingWallets: WalletItem[] = [
+const SEED: WalletItem[] = [
   {
-    id: 1,
+    id: "1",
     name: "Main Wallet",
     address: "0x71a3...A92F",
     network: "ethereum",
@@ -65,7 +55,7 @@ const startingWallets: WalletItem[] = [
     primary: true,
   },
   {
-    id: 2,
+    id: "2",
     name: "Trading Wallet",
     address: "0x9b74...821F",
     network: "ethereum",
@@ -76,7 +66,7 @@ const startingWallets: WalletItem[] = [
     avatar: "from-sky-400 to-blue-600",
   },
   {
-    id: 3,
+    id: "3",
     name: "NFT Wallet",
     address: "0x3e2f...7Da1",
     network: "base",
@@ -84,10 +74,10 @@ const startingWallets: WalletItem[] = [
     change: "+1.27%",
     favorite: false,
     initials: "N",
-    avatar: "from-violet-400 to-blue-500",
+    avatar: "from-violet-400 to-fuchsia-500",
   },
   {
-    id: 4,
+    id: "4",
     name: "DeFi Wallet",
     address: "0x8f12...4Bc9",
     network: "arbitrum",
@@ -98,15 +88,15 @@ const startingWallets: WalletItem[] = [
     avatar: "from-cyan-400 to-blue-500",
   },
   {
-    id: 5,
+    id: "5",
     name: "Solana Wallet",
-    address: "0x5d7e...9C3A",
+    address: "So1an...9C3A",
     network: "solana",
     balance: 1892.76,
     change: "+4.86%",
     favorite: false,
     initials: "S",
-    avatar: "from-blue-500 to-indigo-500",
+    avatar: "from-emerald-400 to-teal-600",
   },
 ]
 
@@ -114,67 +104,61 @@ const activity = [
   {
     label: "Received",
     detail: "+0.42 ETH",
-    time: "2 mins ago",
+    time: "2m ago",
     icon: ArrowDownLeft,
-    color: "text-emerald-300 bg-emerald-400/10",
+    tone: "text-emerald-300 bg-emerald-400/10",
   },
   {
     label: "Sent",
     detail: "−250 USDC",
-    time: "18 mins ago",
+    time: "18m ago",
     icon: ArrowUpRight,
-    color: "text-rose-300 bg-rose-400/10",
+    tone: "text-rose-300 bg-rose-400/10",
   },
   {
     label: "Swapped",
     detail: "ETH → USDC",
-    time: "1 hr ago",
+    time: "1h ago",
     icon: ArrowLeftRight,
-    color: "text-sky-300 bg-sky-400/10",
+    tone: "text-sky-300 bg-sky-400/10",
   },
   {
-    label: "NFT Minted",
-    detail: "#4582",
-    time: "2 hrs ago",
+    label: "NFT",
+    detail: "Mint #4582",
+    time: "2h ago",
     icon: Wallet,
-    color: "text-indigo-300 bg-indigo-400/10",
+    tone: "text-indigo-300 bg-indigo-400/10",
   },
 ]
 
-function ValueChart() {
+function shortAddr(addr: string) {
+  if (addr.length < 12) return addr
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+}
+
+function PortfolioSpark() {
   return (
     <svg
-      className="h-[72px] w-full"
-      viewBox="0 0 340 92"
-      role="img"
-      aria-label="Portfolio value trending upward"
+      className="h-16 w-full"
+      viewBox="0 0 340 80"
+      preserveAspectRatio="none"
+      aria-hidden
     >
       <defs>
-        <linearGradient id="wallet-chart-fill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#7668ff" stopOpacity="0.45" />
-          <stop offset="100%" stopColor="#7668ff" stopOpacity="0" />
+        <linearGradient id="wpf" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#818cf8" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
         </linearGradient>
       </defs>
-      {[16, 42, 68].map((y) => (
-        <line
-          key={y}
-          x1="0"
-          x2="340"
-          y1={y}
-          y2={y}
-          stroke="#1c2a40"
-          strokeDasharray="3 5"
-        />
-      ))}
       <path
-        d="M0 68 L17 61 L34 66 L51 53 L68 57 L85 49 L102 54 L119 43 L136 47 L153 34 L170 38 L187 29 L204 34 L221 22 L238 25 L255 16 L272 20 L289 8 L306 13 L323 10 L340 2 L340 88 L0 88 Z"
-        fill="url(#wallet-chart-fill)"
+        d="M0 58 L28 52 L56 55 L84 42 L112 46 L140 34 L168 38 L196 26 L224 30 L252 18 L280 22 L308 12 L340 8 L340 80 L0 80 Z"
+        fill="url(#wpf)"
       />
       <path
-        d="M0 68 L17 61 L34 66 L51 53 L68 57 L85 49 L102 54 L119 43 L136 47 L153 34 L170 38 L187 29 L204 34 L221 22 L238 25 L255 16 L272 20 L289 8 L306 13 L323 10 L340 2"
+        d="M0 58 L28 52 L56 55 L84 42 L112 46 L140 34 L168 38 L196 26 L224 30 L252 18 L280 22 L308 12 L340 8"
         fill="none"
-        stroke="#887bff"
-        strokeWidth="2.5"
+        stroke="#a5b4fc"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -182,574 +166,489 @@ function ValueChart() {
   )
 }
 
-function SectionTitle({
-  children,
-  action,
-}: {
-  children: React.ReactNode
-  action?: React.ReactNode
-}) {
-  return (
-    <div className="mb-3 flex items-center justify-between gap-2">
-      <h2 className="text-xs font-semibold text-slate-200">{children}</h2>
-      {action}
-    </div>
-  )
-}
-
 export default function WalletPage() {
-  const [wallets, setWallets] = useState(startingWallets)
-  const [activeNetwork, setActiveNetwork] = useState("all")
+  const account = useActiveAccount()
+  const { networkId } = useNetwork()
+  const [wallets, setWallets] = useState(SEED)
+  const [activeNetwork, setActiveNetwork] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [sortOrder, setSortOrder] = useState("recent")
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newWalletName, setNewWalletName] = useState("")
-  const [newWalletAddress, setNewWalletAddress] = useState("")
-  const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [newName, setNewName] = useState("")
+  const [newAddress, setNewAddress] = useState("")
+  const [newNetwork, setNewNetwork] = useState<NetworkId>(networkId)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  // Surface connected thirdweb wallet as primary row
+  useEffect(() => {
+    if (!account?.address) return
+    setWallets((current) => {
+      const exists = current.some(
+        (w) =>
+          w.connected ||
+          w.fullAddress?.toLowerCase() === account.address.toLowerCase()
+      )
+      if (exists) {
+        return current.map((w) =>
+          w.connected ||
+          w.fullAddress?.toLowerCase() === account.address.toLowerCase()
+            ? {
+                ...w,
+                connected: true,
+                primary: true,
+                fullAddress: account.address,
+                address: shortAddr(account.address),
+                network: networkId === "solana" ? w.network : networkId,
+              }
+            : { ...w, primary: false }
+        )
+      }
+      const connectedRow: WalletItem = {
+        id: "connected",
+        name: "Connected wallet",
+        address: shortAddr(account.address),
+        fullAddress: account.address,
+        network: networkId === "solana" ? "ethereum" : networkId,
+        balance: 0,
+        change: "—",
+        favorite: true,
+        initials: account.address.slice(2, 4).toUpperCase(),
+        avatar: "from-white/20 to-indigo-500",
+        primary: true,
+        connected: true,
+      }
+      return [connectedRow, ...current.map((w) => ({ ...w, primary: false }))]
+    })
+  }, [account?.address, networkId])
+
+  const totalBalance = useMemo(
+    () => wallets.reduce((sum, w) => sum + w.balance, 0),
+    [wallets]
+  )
 
   const visibleWallets = useMemo(() => {
-    const filtered = wallets.filter((wallet) => {
-      const matchesNetwork =
-        activeNetwork === "all" || wallet.network === activeNetwork
-      const query = searchTerm.trim().toLowerCase()
-      return (
-        matchesNetwork &&
-        (!query ||
-          `${wallet.name} ${wallet.address}`.toLowerCase().includes(query))
-      )
+    let list = wallets.filter((w) => {
+      const netOk = activeNetwork === "all" || w.network === activeNetwork
+      const q = searchTerm.trim().toLowerCase()
+      const searchOk =
+        !q ||
+        `${w.name} ${w.address} ${w.fullAddress ?? ""}`
+          .toLowerCase()
+          .includes(q)
+      return netOk && searchOk
     })
     if (sortOrder === "highest")
-      return [...filtered].sort(
-        (first, second) => second.balance - first.balance
-      )
+      list = [...list].sort((a, b) => b.balance - a.balance)
     if (sortOrder === "lowest")
-      return [...filtered].sort(
-        (first, second) => first.balance - second.balance
-      )
-    return filtered
-  }, [activeNetwork, searchTerm, sortOrder, wallets])
+      list = [...list].sort((a, b) => a.balance - b.balance)
+    return list
+  }, [wallets, activeNetwork, searchTerm, sortOrder])
 
-  const toggleFavorite = (id: number) => {
-    setWallets((current) =>
-      current.map((wallet) =>
-        wallet.id === id ? { ...wallet, favorite: !wallet.favorite } : wallet
-      )
+  const toggleFavorite = (id: string) =>
+    setWallets((c) =>
+      c.map((w) => (w.id === id ? { ...w, favorite: !w.favorite } : w))
     )
-  }
 
-  const addWallet = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const name = newWalletName.trim()
-    const address = newWalletAddress.trim()
+  const addWallet = (e: React.FormEvent) => {
+    e.preventDefault()
+    const name = newName.trim()
+    const address = newAddress.trim()
     if (!name || !address) return
-    setWallets((current) => [
-      ...current,
+    setWallets((c) => [
+      ...c,
       {
-        id: Date.now(),
+        id: `${Date.now()}`,
         name,
-        address:
-          address.length > 14
-            ? `${address.slice(0, 6)}...${address.slice(-4)}`
-            : address,
-        network: "ethereum",
+        address: shortAddr(address),
+        fullAddress: address,
+        network: newNetwork,
         balance: 0,
         change: "0.00%",
         favorite: false,
         initials: name.slice(0, 1).toUpperCase(),
-        avatar: "from-cyan-400 to-blue-500",
+        avatar: "from-cyan-400 to-blue-600",
       },
     ])
-    setNewWalletName("")
-    setNewWalletAddress("")
+    setNewName("")
+    setNewAddress("")
     setShowAddForm(false)
   }
 
-  const copyAddress = async (wallet: WalletItem) => {
-    await navigator.clipboard?.writeText(wallet.address)
-    setCopiedId(wallet.id)
+  const copyAddress = async (w: WalletItem) => {
+    const text = w.fullAddress ?? w.address
+    await navigator.clipboard?.writeText(text)
+    setCopiedId(w.id)
     window.setTimeout(() => setCopiedId(null), 1400)
   }
 
-  const countForNetwork = (network: string) =>
-    network === "all"
+  const countFor = (net: string) =>
+    net === "all"
       ? wallets.length
-      : wallets.filter((wallet) => wallet.network === network).length
+      : wallets.filter((w) => w.network === net).length
 
   return (
-    <div className="min-h-full bg-[#070b14] px-4 py-5 text-slate-100 sm:px-6 lg:px-7">
-      <div className="mx-auto max-w-[1500px]">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_262px]">
-          <main className="min-w-0 space-y-3">
-            <section className="relative isolate overflow-hidden rounded-lg border border-slate-800/80 bg-[radial-gradient(ellipse_at_76%_60%,rgba(37,99,235,0.17),transparent_38%),linear-gradient(110deg,#09111e,#070c16_70%)] px-4 py-5 sm:px-5 sm:py-6">
-              <div className="relative z-10 max-w-[620px]">
-                <p className="text-[10px] font-semibold tracking-[0.15em] text-sky-300 uppercase">
-                  Your wallets
-                </p>
-                <h1 className="mt-1.5 text-2xl leading-tight font-semibold tracking-tight text-slate-100 sm:text-[28px]">
-                  Manage your wallets
-                  <br className="hidden sm:block" /> and{" "}
-                  <span className="text-indigo-400">
-                    track on-chain activity.
-                  </span>
-                </h1>
-                <p className="mt-2 max-w-xl text-xs leading-5 text-slate-400">
-                  Add, organize, and monitor your wallets across multiple
-                  networks.
-                  <br className="hidden sm:block" /> Get real-time insights into
-                  your assets, transactions, and more.
-                </p>
-              </div>
-              <img
-                src="/hero.png"
-                alt="Wallet and Ethereum network illustration"
-                className="pointer-events-none absolute top-1/2 right-2 hidden w-[210px] -translate-y-1/2 object-contain opacity-95 md:block"
-              />
-            </section>
+    <div className="min-h-full bg-[#05080f] text-slate-100">
+      <div className="mx-auto max-w-[1400px] space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-indigo-300/90">Wallets</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              Portfolio overview
+            </h1>
+            <p className="mt-1.5 max-w-lg text-sm text-slate-500">
+              Track addresses across networks. Connected wallets appear as
+              primary when you link via thirdweb.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="h-9 bg-white text-slate-950 hover:bg-slate-100"
+            onClick={() => setShowAddForm((v) => !v)}
+          >
+            <Plus className="size-4" />
+            Add wallet
+          </Button>
+        </div>
 
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { value: "all", label: "All networks" },
-                ...networks.map((network) => ({
-                  value: network.value,
-                  label: network.name,
-                })),
-              ].map((network) => (
-                <Button
-                  key={network.value}
-                  size="sm"
-                  variant={
-                    activeNetwork === network.value ? "default" : "outline"
-                  }
-                  onClick={() => setActiveNetwork(network.value)}
-                  className={`h-7 gap-1.5 px-2.5 text-[10px] ${activeNetwork === network.value ? "border-indigo-500/40 bg-indigo-600/80 text-white hover:bg-indigo-500" : "border-slate-800 bg-slate-900/60 text-slate-300 hover:bg-slate-800"}`}
-                >
-                  {network.value !== "all" && (
-                    <img
-                      src={
-                        networks.find((item) => item.value === network.value)
-                          ?.logo
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0 space-y-4">
+            {/* Summary cards */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.05] to-transparent p-5 sm:col-span-2">
+                <div className="pointer-events-none absolute -right-10 top-0 size-40 rounded-full bg-indigo-500/15 blur-3xl" />
+                <p className="text-xs text-slate-500">Total tracked value</p>
+                <p className="mt-1 text-3xl font-semibold tracking-tight text-white">
+                  $
+                  {totalBalance.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+                <p className="mt-1 text-xs text-emerald-300/90">
+                  Demo balances · connect wallet for live address
+                </p>
+                <div className="mt-4">
+                  <PortfolioSpark />
+                </div>
+              </div>
+              <div className="flex flex-col justify-between rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
+                <div>
+                  <p className="text-xs text-slate-500">Wallets</p>
+                  <p className="mt-1 text-3xl font-semibold text-white">
+                    {wallets.length}
+                  </p>
+                </div>
+                <div className="mt-4 space-y-2 text-xs text-slate-500">
+                  <div className="flex justify-between">
+                    <span>Favorites</span>
+                    <span className="text-slate-300">
+                      {wallets.filter((w) => w.favorite).length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>App network</span>
+                    <span className="text-slate-300">
+                      {getNetwork(networkId).label}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Session</span>
+                    <span
+                      className={
+                        account ? "text-emerald-300" : "text-slate-500"
                       }
+                    >
+                      {account ? "Connected" : "No wallet"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { value: "all", label: "All" },
+                ...NETWORKS.filter((n) => n.id !== "polygon").map((n) => ({
+                  value: n.id,
+                  label: n.label,
+                  logo: n.logo,
+                })),
+              ].map((n) => (
+                <button
+                  key={n.value}
+                  type="button"
+                  onClick={() => setActiveNetwork(n.value)}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs transition-colors",
+                    activeNetwork === n.value
+                      ? "border-white/20 bg-white text-slate-950"
+                      : "border-white/[0.08] bg-white/[0.03] text-slate-400 hover:border-white/15 hover:text-slate-200"
+                  )}
+                >
+                  {"logo" in n && n.logo && (
+                    <img
+                      src={n.logo as string}
                       alt=""
                       className="size-3.5 rounded-full"
                     />
                   )}
-                  {network.label}
-                  <span className="rounded bg-black/15 px-1 text-[9px]">
-                    {countForNetwork(network.value)}
+                  {n.label}
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 text-[10px]",
+                      activeNetwork === n.value
+                        ? "bg-black/10"
+                        : "bg-white/[0.06]"
+                    )}
+                  >
+                    {countFor(n.value)}
                   </span>
-                </Button>
+                </button>
               ))}
-              <div className="ml-auto flex items-center gap-1.5">
-                <div className="relative hidden sm:block">
+              <div className="ml-auto flex flex-1 items-center gap-2 sm:flex-none">
+                <div className="relative min-w-0 flex-1 sm:w-40 sm:flex-none">
                   <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-slate-500" />
                   <Input
                     value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Search wallets"
-                    aria-label="Search wallets"
-                    className="h-8 w-36 border-slate-800 bg-slate-900/60 pl-8 text-xs placeholder:text-slate-500"
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search"
+                    className="h-8 border-white/[0.08] bg-white/[0.03] pl-8 text-xs"
                   />
                 </div>
                 <Select
                   value={sortOrder}
-                  onValueChange={(value) => setSortOrder(value ?? "recent")}
+                  onValueChange={(v) => setSortOrder(v ?? "recent")}
                 >
-                  <SelectTrigger className="h-8 w-[130px] border-slate-800 bg-slate-900/60 text-[10px] text-slate-300">
+                  <SelectTrigger className="h-8 w-[120px] border-white/[0.08] bg-white/[0.03] text-[11px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="recent">Sort: Recently used</SelectItem>
-                    <SelectItem value="highest">
-                      Balance: High to low
-                    </SelectItem>
-                    <SelectItem value="lowest">Balance: Low to high</SelectItem>
+                    <SelectItem value="recent">Recent</SelectItem>
+                    <SelectItem value="highest">High → low</SelectItem>
+                    <SelectItem value="lowest">Low → high</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="relative mt-2 w-full sm:hidden">
-                <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-slate-500" />
-                <Input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search wallets"
-                  aria-label="Search wallets"
-                  className="h-8 border-slate-800 bg-slate-900/60 pl-8 text-xs placeholder:text-slate-500"
-                />
-              </div>
             </div>
 
-            <Card className="gap-0 rounded-lg border border-slate-800/80 bg-[#09111e] py-0 text-slate-100 ring-0">
-              <CardHeader className="flex-row items-center justify-between px-3.5 py-3 sm:px-4">
-                <CardTitle className="text-sm font-semibold">
+            {/* Add form */}
+            {showAddForm && (
+              <form
+                onSubmit={addWallet}
+                className="grid gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:grid-cols-[1fr_1.2fr_130px_auto_auto] sm:items-center"
+              >
+                <Input
+                  autoFocus
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Label"
+                  className="h-9 border-white/10 bg-[#0a0f1a] text-sm"
+                  required
+                />
+                <Input
+                  value={newAddress}
+                  onChange={(e) => setNewAddress(e.target.value)}
+                  placeholder="0x… or address"
+                  className="h-9 border-white/10 bg-[#0a0f1a] font-mono text-sm"
+                  required
+                />
+                <Select
+                  value={newNetwork}
+                  onValueChange={(v) => v && setNewNetwork(v as NetworkId)}
+                >
+                  <SelectTrigger className="h-9 border-white/10 bg-[#0a0f1a] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NETWORKS.map((n) => (
+                      <SelectItem key={n.id} value={n.id}>
+                        {n.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="h-9 bg-white text-slate-950 hover:bg-slate-100"
+                >
+                  Save
+                </Button>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => setShowAddForm(false)}
+                  className="text-slate-400"
+                >
+                  <X className="size-4" />
+                </Button>
+              </form>
+            )}
+
+            {/* List */}
+            <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02]">
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+                <p className="text-sm font-medium text-slate-200">
                   My wallets{" "}
-                  <span className="ml-1 text-slate-500">
+                  <span className="text-slate-500">
                     ({visibleWallets.length})
                   </span>
-                </CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => setShowAddForm((open) => !open)}
-                  className="h-7 bg-indigo-600 px-2.5 text-[10px] text-white hover:bg-indigo-500"
-                >
-                  <Plus className="size-3.5" />
-                  Add wallet
-                </Button>
-              </CardHeader>
-              {showAddForm && (
-                <form
-                  onSubmit={addWallet}
-                  className="mx-3.5 mb-3 grid gap-2 rounded-md border border-slate-800 bg-slate-900/60 p-3 sm:mx-4 sm:grid-cols-[1fr_1.3fr_auto_auto] sm:items-center"
-                >
-                  <Input
-                    autoFocus
-                    value={newWalletName}
-                    onChange={(event) => setNewWalletName(event.target.value)}
-                    placeholder="Wallet name"
-                    aria-label="Wallet name"
-                    className="h-8 border-slate-700 bg-[#090f1b] text-xs"
-                    required
-                  />
-                  <Input
-                    value={newWalletAddress}
-                    onChange={(event) =>
-                      setNewWalletAddress(event.target.value)
-                    }
-                    placeholder="Wallet address"
-                    aria-label="Wallet address"
-                    className="h-8 border-slate-700 bg-[#090f1b] font-mono text-xs"
-                    required
-                  />
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="h-8 bg-indigo-600 text-xs"
-                  >
-                    Save wallet
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label="Cancel adding wallet"
-                    onClick={() => setShowAddForm(false)}
-                    className="text-slate-400"
-                  >
-                    <X className="size-4" />
-                  </Button>
-                </form>
-              )}
-              <CardContent className="space-y-1.5 px-2.5 pb-3 sm:px-3.5">
-                {visibleWallets.length ? (
-                  visibleWallets.map((wallet) => {
-                    const network =
-                      networks.find((item) => item.value === wallet.network) ??
-                      networks[0]
-                    const isNegative = wallet.change.startsWith("−")
-                    return (
-                      <div
-                        key={wallet.id}
-                        className="grid grid-cols-[20px_minmax(0,1fr)_minmax(105px,0.75fr)_minmax(96px,0.65fr)] items-center gap-2 rounded-md border border-slate-800 bg-[#0a1422]/70 px-2.5 py-2.5 transition-colors hover:border-slate-700 sm:grid-cols-[24px_minmax(160px,1.2fr)_minmax(105px,0.75fr)_minmax(110px,0.7fr)] sm:gap-3 sm:px-3"
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          aria-label={
-                            wallet.favorite
-                              ? "Remove from favorites"
-                              : "Add to favorites"
-                          }
-                          onClick={() => toggleFavorite(wallet.id)}
-                          className={
-                            wallet.favorite
-                              ? "text-amber-300 hover:text-amber-200"
-                              : "text-slate-500 hover:text-amber-300"
-                          }
-                        >
-                          <Star
-                            className={`size-3.5 ${wallet.favorite ? "fill-current" : ""}`}
-                          />
-                        </Button>
-                        <div className="flex min-w-0 items-center gap-2.5">
-                          <div
-                            className={`grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br ${wallet.avatar} text-xs font-semibold text-white`}
-                          >
-                            {wallet.initials}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <p className="truncate text-[11px] font-medium text-slate-200">
-                                {wallet.name}
-                              </p>
-                              {wallet.primary && (
-                                <Badge className="h-4 border-emerald-400/20 bg-emerald-400/10 px-1.5 text-[8px] text-emerald-300">
-                                  Primary
-                                </Badge>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => void copyAddress(wallet)}
-                              className="mt-0.5 flex items-center gap-1 font-mono text-[9px] text-slate-500 hover:text-slate-300"
-                            >
-                              {wallet.address}
-                              {copiedId === wallet.id ? (
-                                <Check className="size-3 text-emerald-300" />
-                              ) : (
-                                <Copy className="size-3" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        <Select defaultValue={wallet.network}>
-                          <SelectTrigger className="h-7 w-full max-w-[110px] min-w-0 gap-1 border-0 bg-slate-900/70 px-1.5 text-[9px] text-slate-300">
-                            <SelectValue>
-                              <span className="flex items-center gap-1.5">
-                                <img
-                                  src={network.logo}
-                                  alt=""
-                                  className="size-4 rounded-full"
-                                />
-                                <span className="truncate">{network.name}</span>
-                              </span>
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {networks.map((item) => (
-                              <SelectItem key={item.value} value={item.value}>
-                                <span className="flex items-center gap-2">
-                                  <img
-                                    src={item.logo}
-                                    alt=""
-                                    className="size-4 rounded-full"
-                                  />
-                                  {item.name}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="text-right">
-                          <p className="text-[10px] font-medium text-slate-200 sm:text-[11px]">
-                            $
-                            {wallet.balance.toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </p>
-                          <p
-                            className={`mt-0.5 text-[9px] ${isNegative ? "text-rose-400" : "text-emerald-300"}`}
-                          >
-                            {wallet.change} (24h)
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <div className="rounded-md border border-dashed border-slate-800 px-4 py-10 text-center text-xs text-slate-500">
-                    No wallets match these filters.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-lg border border-slate-800/80 bg-[#09111e] py-3 text-slate-100 ring-0">
-              <CardHeader className="px-3.5 pb-2 sm:px-4">
-                <CardTitle className="text-[11px] font-semibold">
-                  Add more wallets
-                </CardTitle>
-                <p className="text-[9px] text-slate-500">
-                  Connect multiple wallets to get a complete view of your
-                  on-chain activity.
                 </p>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-2 px-3.5 sm:grid-cols-4 sm:px-4">
-                {networks.map((network) => (
-                  <button
-                    type="button"
-                    key={network.value}
-                    onClick={() => {
-                      setActiveNetwork(network.value)
-                      setShowAddForm(true)
-                    }}
-                    className="flex min-w-0 items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-2 py-2 text-left transition-colors hover:border-slate-700 hover:bg-slate-900 sm:px-2.5"
-                  >
-                    <img
-                      src={network.logo}
-                      alt=""
-                      className="size-6 shrink-0 rounded-full"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[10px] font-medium text-slate-200">
-                        {network.name}
-                      </span>
-                      <span className="block truncate text-[8px] text-slate-500">
-                        Connect or add address
-                      </span>
-                    </span>
-                    <ChevronRight className="size-3 shrink-0 text-slate-500" />
-                  </button>
-                ))}
-              </CardContent>
-            </Card>
-          </main>
-
-          <aside className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <Card className="rounded-lg border border-slate-800/80 bg-[#09111e] py-3.5 text-slate-100 ring-0">
-              <CardHeader className="px-3.5 pb-0">
-                <SectionTitle
-                  action={<Eye className="size-3 text-slate-500" />}
-                >
-                  Total portfolio value
-                </SectionTitle>
-              </CardHeader>
-              <CardContent className="px-3.5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xl font-semibold tracking-tight text-slate-100">
-                    $28,903.17
-                  </p>
-                  <Badge className="border-emerald-400/20 bg-emerald-400/10 text-[8px] text-emerald-300">
-                    ↗ 2.84% (24h)
-                  </Badge>
-                </div>
-                <ValueChart />
-                <div className="mt-1 flex items-center justify-between">
-                  {["1D", "1W", "1M", "3M", "1Y"].map((range, index) => (
-                    <button
-                      type="button"
-                      key={range}
-                      className={`rounded px-2 py-1 text-[9px] ${index === 0 ? "border border-indigo-500/40 bg-indigo-500/15 text-indigo-200" : "text-slate-500 hover:text-slate-300"}`}
-                    >
-                      {range}
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-lg border border-slate-800/80 bg-[#09111e] py-3.5 text-slate-100 ring-0">
-              <CardHeader className="px-3.5 pb-0">
-                <SectionTitle>Wallet distribution</SectionTitle>
-              </CardHeader>
-              <CardContent className="flex items-center gap-4 px-3.5">
-                <div
-                  className="relative grid size-[104px] shrink-0 place-items-center rounded-full"
-                  style={{
-                    background:
-                      "conic-gradient(#8b5cf6 0 60%, #22d3ee 60% 74%, #0ea5e9 74% 85%, #4f46e5 85% 92%, #94a3b8 92% 100%)",
-                  }}
-                >
-                  <div className="grid size-[66px] place-content-center rounded-full bg-[#09111e] text-center">
-                    <span className="text-base font-semibold">
-                      {wallets.length}
-                    </span>
-                    <span className="text-[9px] text-slate-500">Wallets</span>
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  {[
-                    ["Ethereum", "60%", "bg-violet-500"],
-                    ["Base", "14%", "bg-cyan-400"],
-                    ["Arbitrum", "11%", "bg-sky-500"],
-                    ["Solana", "7%", "bg-indigo-500"],
-                    ["Other", "8%", "bg-slate-400"],
-                  ].map(([name, percent, color]) => (
+              </div>
+              <div className="divide-y divide-white/[0.05]">
+                {visibleWallets.map((wallet) => {
+                  const net = getNetwork(wallet.network)
+                  const neg = wallet.change.startsWith("−")
+                  return (
                     <div
-                      className="flex items-center gap-2 text-[9px]"
-                      key={name}
+                      key={wallet.id}
+                      className="group flex flex-wrap items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] sm:flex-nowrap"
                     >
-                      <span className={`size-2 rounded-full ${color}`} />
-                      <span className="flex-1 text-slate-400">{name}</span>
-                      <span className="text-slate-300">{percent}</span>
+                      <button
+                        type="button"
+                        aria-label="Favorite"
+                        onClick={() => toggleFavorite(wallet.id)}
+                        className={cn(
+                          "shrink-0",
+                          wallet.favorite
+                            ? "text-amber-300"
+                            : "text-slate-600 hover:text-amber-300"
+                        )}
+                      >
+                        <Star
+                          className={cn(
+                            "size-4",
+                            wallet.favorite && "fill-current"
+                          )}
+                        />
+                      </button>
+
+                      <div
+                        className={cn(
+                          "grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-semibold text-white ring-1 ring-white/10",
+                          wallet.avatar
+                        )}
+                      >
+                        {wallet.initials}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-medium text-white">
+                            {wallet.name}
+                          </p>
+                          {wallet.primary && (
+                            <Badge className="h-5 border-emerald-400/20 bg-emerald-400/10 text-[10px] text-emerald-300">
+                              Primary
+                            </Badge>
+                          )}
+                          {wallet.connected && (
+                            <Badge className="h-5 border-indigo-400/20 bg-indigo-400/10 text-[10px] text-indigo-200">
+                              Live
+                            </Badge>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void copyAddress(wallet)}
+                          className="mt-0.5 inline-flex items-center gap-1 font-mono text-[11px] text-slate-500 hover:text-slate-300"
+                        >
+                          {wallet.address}
+                          {copiedId === wallet.id ? (
+                            <Check className="size-3 text-emerald-300" />
+                          ) : (
+                            <Copy className="size-3 opacity-60" />
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <img
+                          src={net.logo}
+                          alt=""
+                          className="size-4 rounded-full"
+                        />
+                        {net.label}
+                      </div>
+
+                      <div className="w-full text-right sm:w-28">
+                        <p className="text-sm font-medium text-slate-100">
+                          $
+                          {wallet.balance.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </p>
+                        <p
+                          className={cn(
+                            "text-[11px]",
+                            neg ? "text-rose-300" : "text-emerald-300",
+                            wallet.change === "—" && "text-slate-500"
+                          )}
+                        >
+                          {wallet.change}
+                        </p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  )
+                })}
+                {!visibleWallets.length && (
+                  <p className="px-4 py-12 text-center text-sm text-slate-500">
+                    No wallets match this filter.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
 
-            <Card className="rounded-lg border border-slate-800/80 bg-[#09111e] py-3.5 text-slate-100 ring-0">
-              <CardHeader className="px-3.5 pb-0">
-                <SectionTitle>Quick actions</SectionTitle>
-              </CardHeader>
-              <CardContent className="space-y-0 px-3.5">
-                {[
-                  [Wallet, "Connect wallet", "Link your Web3 wallet"],
-                  [Plus, "Import wallet", "Add an existing address"],
-                  [Star, "Create watchlist", "Track specific addresses"],
-                  [Bell, "Set up alerts", "Get notified of key activity"],
-                ].map(([Icon, title, subtitle]) => (
-                  <button
-                    type="button"
-                    key={title as string}
-                    onClick={() =>
-                      title === "Import wallet"
-                        ? setShowAddForm(true)
-                        : undefined
-                    }
-                    className="flex w-full items-center gap-2.5 border-b border-slate-800/70 py-2 text-left last:border-0"
-                  >
-                    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-indigo-500/20 text-indigo-200">
-                      <Icon className="size-3.5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[10px] font-medium text-slate-200">
-                        {title as string}
-                      </span>
-                      <span className="block text-[9px] text-slate-500">
-                        {subtitle as string}
-                      </span>
-                    </span>
-                    <ChevronRight className="size-3 text-slate-500" />
-                  </button>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-lg border border-slate-800/80 bg-[#09111e] py-3.5 text-slate-100 ring-0">
-              <CardHeader className="px-3.5 pb-0">
-                <SectionTitle
-                  action={
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="h-5 px-1 text-[9px] text-sky-300"
-                    >
-                      View all <ArrowRight />
-                    </Button>
-                  }
-                >
-                  Recent activity
-                </SectionTitle>
-              </CardHeader>
-              <CardContent className="space-y-0 px-3.5">
+          {/* Sidebar */}
+          <aside className="space-y-4">
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+              <p className="text-sm font-medium text-slate-200">Recent activity</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Sample feed for the primary wallet
+              </p>
+              <ul className="mt-4 space-y-3">
                 {activity.map((item) => {
                   const Icon = item.icon
                   return (
-                    <div
-                      className="flex items-center gap-2 border-b border-slate-800/70 py-2 last:border-0"
-                      key={item.label}
+                    <li
+                      key={item.label + item.time}
+                      className="flex items-center gap-3"
                     >
                       <span
-                        className={`grid size-6 shrink-0 place-items-center rounded-md ${item.color}`}
+                        className={cn(
+                          "flex size-8 items-center justify-center rounded-full",
+                          item.tone
+                        )}
                       >
                         <Icon className="size-3.5" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] text-slate-200">
+                        <p className="text-xs font-medium text-slate-200">
                           {item.label}
                         </p>
-                        <p className="text-[9px] text-slate-500">
-                          {item.detail}
-                        </p>
+                        <p className="text-[11px] text-slate-500">{item.detail}</p>
                       </div>
-                      <span className="text-[9px] whitespace-nowrap text-slate-500">
+                      <span className="text-[10px] text-slate-600">
                         {item.time}
                       </span>
-                    </div>
+                    </li>
                   )
                 })}
-              </CardContent>
-            </Card>
+              </ul>
+            </div>
+
+            <div className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-indigo-500/10 to-transparent p-4">
+              <p className="text-sm font-medium text-white">Quick tip</p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                Connect a wallet from Settings or Marketplace to pin it as your
+                live primary address. Demo rows stay for layout and filtering.
+              </p>
+            </div>
           </aside>
         </div>
       </div>
