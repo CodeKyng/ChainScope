@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -163,32 +164,39 @@ export function AppLayout() {
               </Button>
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger
-                  className="inline-flex shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b14]"
-                  nativeButton={false}
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b14]"
                 >
-                  <Avatar className="cursor-pointer">
+                  <Avatar className="size-8 cursor-pointer">
                     <AvatarImage src={user?.photoURL ?? undefined} />
-                    <AvatarFallback>{initials}</AvatarFallback>
+                    <AvatarFallback className="bg-slate-800 text-slate-200">
+                      {initials}
+                    </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" sideOffset={8} className="min-w-48">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {displayName}
-                      </p>
-                      {subtitle && (
-                        <p className="max-w-[200px] truncate text-xs leading-none text-muted-foreground">
-                          {subtitle}
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={8}
+                  className="min-w-48 border border-slate-700 bg-slate-900 text-slate-100 shadow-xl"
+                >
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="font-normal text-slate-200">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {displayName}
                         </p>
-                      )}
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+                        {subtitle && (
+                          <p className="max-w-[200px] truncate text-xs leading-none text-slate-400">
+                            {subtitle}
+                          </p>
+                        )}
+                      </div>
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="bg-slate-700" />
                   <DropdownMenuItem
                     variant="destructive"
-                    onClick={handleLogout}
-                    className="cursor-pointer"
+                    onClick={() => void handleLogout()}
+                    className="cursor-pointer text-rose-300 focus:bg-rose-500/10 focus:text-rose-200"
                   >
                     <LogOut className="size-4" />
                     Log out
