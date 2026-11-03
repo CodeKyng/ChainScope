@@ -67,8 +67,8 @@ export function LoginForm({
     >
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Login to your account</h1>
-          <p className="text-sm text-balance text-muted-foreground">
+          <h1 className="text-2xl font-bold text-slate-100">Login to your account</h1>
+          <p className="text-sm text-balance text-slate-400">
             Enter your email below to login to your account
           </p>
         </div>
@@ -89,17 +89,13 @@ export function LoginForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={busy}
+            className="border-slate-700 bg-slate-900"
           />
         </Field>
         <Field>
           <div className="flex items-center">
             <FieldLabel htmlFor="password">Password</FieldLabel>
-            <Link
-              to="/forgot-password"
-              className="ml-auto text-sm underline-offset-4 hover:underline"
-            >
-              Forgot your password?
-            </Link>
+            {/* Password reset not implemented yet — hide dead link */}
           </div>
           <Input
             id="password"
@@ -108,6 +104,7 @@ export function LoginForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={busy}
+            className="border-slate-700 bg-slate-900"
           />
         </Field>
         <Field>
@@ -121,14 +118,15 @@ export function LoginForm({
             variant="outline"
             type="button"
             disabled={busy}
-            onClick={handleConnectWallet}
+            onClick={() => void handleConnectWallet()}
+            className="border-slate-700"
           >
             <Wallet className="size-4" />
             {isConnecting ? "Connecting..." : "Connect Wallet"}
           </Button>
-          <FieldDescription className="text-center">
+          <FieldDescription className="text-center text-slate-400">
             Don't have an account?{" "}
-            <Link to="/signup" className="underline underline-offset-4">
+            <Link to="/signup" className="text-slate-200 underline underline-offset-4">
               Sign up
             </Link>
           </FieldDescription>
