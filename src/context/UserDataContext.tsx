@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
@@ -16,6 +17,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore"
+import { useActiveAccount } from "thirdweb/react"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/AuthContext"
 import { isAdminEmail } from "@/lib/roles"
@@ -118,6 +120,7 @@ type UserDataContextType = {
   notifications: AppNotification[]
   unreadCount: number
   loading: boolean
+  linkedWallet: string | null
   adminUsers: UserProfile[]
   adminUsersLoading: boolean
   addWatchItem: (item: Omit<WatchItem, "id" | "createdAt">) => Promise<void>
@@ -134,6 +137,7 @@ const UserDataContext = createContext<UserDataContextType | undefined>(undefined
 
 export function UserDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const account = useActiveAccount()
   const uid = user?.uid ?? null
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -143,8 +147,8 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [adminUsers, setAdminUsers] = useState<UserProfile[]>([])
   const [adminUsersLoading, setAdminUsersLoading] = useState(false)
+  const linkedNotifyRef = useRef<string | null>(null)
 
-  // Local bootstrap + Firestore sync
   useEffect(() => {
     setWatchlist(loadJson(storageKey(uid, "watchlist"), []))
     setAlertRules(loadJson(storageKey(uid, "alertRules"), DEFAULT_RULES))
@@ -161,29 +165,33 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       ref,
       (snap) => {
         if (snap.exists()) {
-          const data = snap.data() as UserProfile
+          const data = snap.data() as UserProfile & {
+            watchlist?: WatchItem[]
+            alertRules?: AlertRule[]
+            notifications?: AppNotification[]
+          }
           setProfile({ ...data, uid })
           if (Array.isArray(data.watchlist)) {
-            setWatchlist(data.watchlist as WatchItem[])
+            setWatchlist(data.watchlist)
             saveJson(storageKey(uid, "watchlist"), data.watchlist)
           }
-          if (Array.isArray((data as { alertRules?: AlertRule[] }).alertRules)) {
-            const rules = (data as { alertRules: AlertRule[] }).alertRules
-            setAlertRules(rules)
-            saveJson(storageKey(uid, "alertRules"), rules)
+          if (Array.isArray(data.alertRules)) {
+            setAlertRules(data.alertRules)
+            saveJson(storageKey(uid, "alertRules"), data.alertRules)
           }
-          if (Array.isArray((data as { notifications?: AppNotification[] }).notifications)) {
-            const n = (data as { notifications: AppNotification[] }).notifications
-            setNotifications(n)
-            saveJson(storageKey(uid, "notifications"), n)
+          if (Array.isArray(data.notifications)) {
+            setNotifications(data.notifications)
+            saveJson(storageKey(uid, "notifications"), data.notifications)
           }
         } else {
           const role = isAdminEmail(user?.email) ? "admin" : "user"
           const created: UserProfile = {
             uid,
             email: user?.email ?? null,
-            displayName: user?.displayName ?? user?.email?.split("@")[0] ?? "User",
+            displayName:
+              user?.displayName ?? user?.email?.split("@")[0] ?? "User",
             photoURL: user?.photoURL ?? null,
+            walletAddress: null,
             role,
             status: "Active",
             plan: "Free",
@@ -197,9 +205,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
             notifications: [],
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-          }).catch(() => {
-            /* offline / rules */
-          })
+          }).catch(() => {})
           setProfile(created)
         }
         setLoading(false)
@@ -231,6 +237,50 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     },
     [uid]
   )
+
+  const saveProfile = useCallback(
+    async (
+      data: Partial<Pick<UserProfile, "displayName" | "walletAddress">>
+    ) => {
+      if (profile) {
+        setProfile({ ...profile, ...data, updatedAt: Date.now() })
+      }
+      await persistUserFields(data)
+    },
+    [profile, persistUserFields]
+  )
+
+  // Link active thirdweb wallet → Firebase user profile (single identity)
+  useEffect(() => {
+    if (!uid || !account?.address || !profile) return
+    const addr = account.address
+    if (profile.walletAddress?.toLowerCase() === addr.toLowerCase()) return
+
+    void (async () => {
+      await saveProfile({ walletAddress: addr })
+      if (linkedNotifyRef.current !== addr) {
+        linkedNotifyRef.current = addr
+        const n: AppNotification = {
+          id: `${Date.now()}`,
+          text: `Wallet ${addr.slice(0, 6)}...${addr.slice(-4)} linked to your account`,
+          time: Date.now(),
+          read: false,
+        }
+        const list = [n, ...notifications].slice(0, 50)
+        setNotifications(list)
+        saveJson(storageKey(uid, "notifications"), list)
+        await persistUserFields({ notifications: list, walletAddress: addr })
+      }
+    })()
+  }, [
+    uid,
+    account?.address,
+    profile?.walletAddress,
+    profile,
+    saveProfile,
+    notifications,
+    persistUserFields,
+  ])
 
   const addWatchItem = useCallback(
     async (item: Omit<WatchItem, "id" | "createdAt">) => {
@@ -292,16 +342,6 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     [notifications, uid, persistUserFields]
   )
 
-  const saveProfile = useCallback(
-    async (data: Partial<Pick<UserProfile, "displayName" | "walletAddress">>) => {
-      if (profile) {
-        setProfile({ ...profile, ...data, updatedAt: Date.now() })
-      }
-      await persistUserFields(data)
-    },
-    [profile, persistUserFields]
-  )
-
   const refreshAdminUsers = useCallback(async () => {
     if (!isAdminEmail(user?.email)) return
     setAdminUsersLoading(true)
@@ -341,6 +381,9 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     [notifications]
   )
 
+  const linkedWallet =
+    account?.address ?? profile?.walletAddress ?? null
+
   const value = useMemo(
     () => ({
       profile,
@@ -349,6 +392,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       notifications,
       unreadCount,
       loading,
+      linkedWallet,
       adminUsers,
       adminUsersLoading,
       addWatchItem,
@@ -367,6 +411,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       notifications,
       unreadCount,
       loading,
+      linkedWallet,
       adminUsers,
       adminUsersLoading,
       addWatchItem,

@@ -35,12 +35,18 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
-      <div className="relative hidden bg-slate-900 lg:block">
-        <img
-          src="/logo.png"
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-30"
-        />
+      <div className="relative hidden overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-950 to-[#070b14] lg:block">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(99,102,241,0.25),transparent_50%)]" />
+        <div className="relative flex h-full flex-col items-center justify-center gap-4 p-10 text-center">
+          <img src="/logo.png" alt="" className="size-20 opacity-90" />
+          <p className="max-w-xs text-lg font-medium text-slate-100">
+            One account for wallets, alerts, and marketplace
+          </p>
+          <p className="max-w-sm text-sm text-slate-400">
+            Sign up with email, then connect a wallet in Settings or Marketplace
+            to link them to the same profile.
+          </p>
+        </div>
       </div>
     </div>
   )

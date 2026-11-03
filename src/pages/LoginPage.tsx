@@ -15,7 +15,6 @@ export default function LoginPage() {
     )
   }
 
-  // Match ProtectedRoute: Firebase user OR connected wallet
   if (user || account) {
     return <Navigate to="/dashboard" replace />
   }
@@ -36,12 +35,17 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-      <div className="relative hidden bg-slate-900 lg:block">
-        <img
-          src="/logo.png"
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-30"
-        />
+      <div className="relative hidden overflow-hidden bg-gradient-to-br from-sky-950 via-slate-950 to-[#070b14] lg:block">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,rgba(56,189,248,0.2),transparent_50%)]" />
+        <div className="relative flex h-full flex-col items-center justify-center gap-4 p-10 text-center">
+          <img src="/logo.png" alt="" className="size-20 opacity-90" />
+          <p className="max-w-xs text-lg font-medium text-slate-100">
+            Welcome back to ChainScope
+          </p>
+          <p className="max-w-sm text-sm text-slate-400">
+            Email and wallet can be linked on one profile after you sign in.
+          </p>
+        </div>
       </div>
     </div>
   )
