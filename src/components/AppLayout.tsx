@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import {
   useActiveAccount,
@@ -19,11 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import ethereumLogo from "@/assets/ethereum.png"
-import solanaLogo from "@/assets/solana.png"
-import baseLogo from "@/assets/Base.png"
-import arbitrumLogo from "@/assets/arbitrum.png"
-import polygonLogo from "@/assets/Polygon.png"
 import {
   InputGroup,
   InputGroupAddon,
@@ -42,14 +38,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/context/AuthContext"
-
-const items = [
-  { label: "Ethereum", value: "ethereum", logo: ethereumLogo },
-  { label: "Base", value: "base", logo: baseLogo },
-  { label: "Arbitrum", value: "arbitrum", logo: arbitrumLogo },
-  { label: "Solana", value: "solana", logo: solanaLogo },
-  { label: "Polygon", value: "polygon", logo: polygonLogo },
-]
+import { useNetwork } from "@/context/NetworkContext"
+import { useUserData } from "@/context/UserDataContext"
+import type { NetworkId } from "@/lib/networks"
 
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -68,6 +59,14 @@ function pageFromPath(pathname: string): PageKey {
   return "landing"
 }
 
+function timeAgo(ts: number) {
+  const s = Math.floor((Date.now() - ts) / 1000)
+  if (s < 60) return `${s}s ago`
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  return `${Math.floor(s / 86400)}d ago`
+}
+
 export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -75,23 +74,34 @@ export function AppLayout() {
   const account = useActiveAccount()
   const wallet = useActiveWallet()
   const { disconnect } = useDisconnect()
+  const { networkId, setNetworkId, networks } = useNetwork()
+  const { notifications, unreadCount, markAllNotificationsRead } = useUserData()
+  const [search, setSearch] = useState("")
 
   const currentPage = pageFromPath(location.pathname)
 
   const handleLogout = async () => {
     try {
-      if (wallet) {
-        await disconnect(wallet)
-      }
+      if (wallet) await disconnect(wallet)
     } catch {
-      // ignore disconnect errors
+      /* ignore */
     }
     try {
       await logout()
     } catch {
-      // ignore if no Firebase session
+      /* ignore */
     }
     navigate("/")
+  }
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = search.trim()
+    if (!q) {
+      navigate("/explore")
+      return
+    }
+    navigate(`/explore?q=${encodeURIComponent(q)}`)
   }
 
   const displayName =
@@ -119,7 +129,10 @@ export function AppLayout() {
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-800/80 bg-[#070b14] px-4 text-slate-100">
           <SidebarTrigger className="mr-4 -ml-1" />
           <div className="flex min-w-0 flex-1 items-center justify-between gap-3 text-sm text-muted-foreground">
-            <div className="font-medium text-foreground">
+            <form
+              onSubmit={handleSearch}
+              className="min-w-0 flex-1 font-medium text-foreground"
+            >
               <InputGroup className="w-full border-slate-700 bg-slate-900/70 sm:w-lg">
                 <InputGroupAddon>
                   <Search />
@@ -127,18 +140,25 @@ export function AppLayout() {
                 <InputGroupInput
                   className="text-xs placeholder:text-slate-500"
                   placeholder="Search wallet address, ENS, tokens or collection..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </InputGroup>
-            </div>
+            </form>
             <div className="flex shrink-0 items-center gap-2">
-              <Select items={items}>
+              <Select
+                value={networkId}
+                onValueChange={(v) => {
+                  if (v) setNetworkId(v as NetworkId)
+                }}
+              >
                 <SelectTrigger className="h-8 w-32 border-slate-700 bg-slate-900/70 text-xs sm:w-36">
-                  <SelectValue placeholder="Pick a Network ..." />
+                  <SelectValue placeholder="Network" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Networks</SelectLabel>
-                    {items.map((item) => (
+                    {networks.map((item) => (
                       <SelectItem key={item.value} value={item.value}>
                         <span className="flex items-center gap-2">
                           <img
@@ -153,19 +173,73 @@ export function AppLayout() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Notifications"
-                className="relative text-slate-300 hover:bg-slate-800 hover:text-white"
-              >
-                <Bell className="size-4" />
-                <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-400" />
-              </Button>
+
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger
-                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b14]"
+                  className="relative inline-flex size-8 items-center justify-center rounded-md text-slate-300 outline-none hover:bg-slate-800 hover:text-white focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Notifications"
                 >
+                  <Bell className="size-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 flex size-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={8}
+                  className="w-72 border border-slate-700 bg-slate-900 text-slate-100 shadow-xl"
+                >
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="flex items-center justify-between font-normal">
+                      <span className="text-sm font-medium">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          type="button"
+                          className="text-[10px] text-indigo-300 hover:underline"
+                          onClick={() => void markAllNotificationsRead()}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="bg-slate-700" />
+                  {notifications.length === 0 ? (
+                    <div className="px-3 py-6 text-center text-xs text-slate-500">
+                      No notifications yet
+                    </div>
+                  ) : (
+                    notifications.slice(0, 6).map((n) => (
+                      <DropdownMenuItem
+                        key={n.id}
+                        className="flex cursor-default flex-col items-start gap-0.5 py-2"
+                        onClick={() => navigate("/alerts")}
+                      >
+                        <span
+                          className={`text-xs ${n.read ? "text-slate-400" : "text-slate-100"}`}
+                        >
+                          {n.text}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {timeAgo(n.time)}
+                        </span>
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                  <DropdownMenuSeparator className="bg-slate-700" />
+                  <DropdownMenuItem
+                    className="justify-center text-xs text-indigo-300"
+                    onClick={() => navigate("/alerts")}
+                  >
+                    View all alerts
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b14]">
                   <Avatar className="size-8 cursor-pointer">
                     <AvatarImage src={user?.photoURL ?? undefined} />
                     <AvatarFallback className="bg-slate-800 text-slate-200">
@@ -193,6 +267,12 @@ export function AppLayout() {
                     </DropdownMenuLabel>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator className="bg-slate-700" />
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => navigate("/settings")}
+                  >
+                    Settings
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
                     onClick={() => void handleLogout()}
