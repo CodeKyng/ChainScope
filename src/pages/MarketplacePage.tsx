@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import {
   useActiveAccount,
   useConnectModal,
@@ -14,16 +15,20 @@ import { NATIVE_TOKEN_ADDRESS } from "thirdweb"
 import {
   ExternalLink,
   ImageIcon,
+  Info,
   Loader2,
   RefreshCw,
   ShoppingBag,
   Tag,
+  Wallet,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useAuth } from "@/context/AuthContext"
+import { useUserData } from "@/context/UserDataContext"
 import {
   client,
   getMarketplaceContract,
@@ -66,8 +71,10 @@ function nftName(listing: DirectListing) {
 }
 
 export default function MarketplacePage() {
+  const { user } = useAuth()
+  const { linkedWallet, profile } = useUserData()
   const account = useActiveAccount()
-  const { connect } = useConnectModal()
+  const { connect, isConnecting } = useConnectModal()
   const { mutateAsync: sendTx, isPending } = useSendTransaction()
 
   const [listings, setListings] = useState<DirectListing[]>([])
@@ -117,12 +124,10 @@ export default function MarketplacePage() {
 
   const handleBuy = async (listing: DirectListing) => {
     if (!marketplace) return
-    const active = await ensureWallet()
-    if (!active && !account) return
-
+    await ensureWallet()
     const buyer = account?.address
     if (!buyer) {
-      setError("Connect a wallet to buy.")
+      setError("Connect a wallet (Sepolia) to buy. Approve the purchase in your wallet when prompted.")
       return
     }
 
@@ -143,7 +148,11 @@ export default function MarketplacePage() {
       const message =
         err instanceof Error ? err.message : "Purchase failed"
       if (!message.toLowerCase().includes("reject")) {
-        setError(message)
+        setError(
+          message.toLowerCase().includes("insufficient")
+            ? `${message} — ensure you have Sepolia ETH for gas and the listing price.`
+            : message
+        )
       }
     } finally {
       setBuyingId(null)
@@ -154,10 +163,11 @@ export default function MarketplacePage() {
     e.preventDefault()
     if (!marketplace) return
 
-    const active = await ensureWallet()
-    if (!active && !account) return
+    await ensureWallet()
     if (!account?.address) {
-      setError("Connect a wallet to list an NFT.")
+      setError(
+        "Connect a wallet on Sepolia to list. You must own the NFT and approve the marketplace to transfer it."
+      )
       return
     }
 
@@ -184,14 +194,20 @@ export default function MarketplacePage() {
         isReservedListing: false,
       })
       await sendTx(tx)
-      setStatusMsg("Listing created successfully.")
+      setStatusMsg(
+        "Listing created. If the tx asked for NFT approval first, confirm that, then list again if needed."
+      )
       setListingForm({ assetContract: "", tokenId: "", price: "" })
       await loadListings()
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to create listing"
       if (!message.toLowerCase().includes("reject")) {
-        setError(message)
+        setError(
+          /approv|allowance|owner/i.test(message)
+            ? `${message} — approve the marketplace contract on the NFT, then retry.`
+            : message
+        )
       }
     } finally {
       setListingBusy(false)
@@ -215,31 +231,10 @@ export default function MarketplacePage() {
               <p className="font-medium text-amber-200">
                 Marketplace contract not configured
               </p>
-              <ol className="list-decimal space-y-2 pl-5 text-slate-400">
-                <li>
-                  Deploy a{" "}
-                  <a
-                    href="https://thirdweb.com/thirdweb.eth/MarketplaceV3"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-indigo-300 underline"
-                  >
-                    MarketplaceV3
-                  </a>{" "}
-                  contract on the thirdweb dashboard.
-                </li>
-                <li>
-                  Add to your <code className="text-slate-200">.env</code>:
-                </li>
-              </ol>
               <pre className="overflow-x-auto rounded-md border border-slate-800 bg-slate-950 p-3 text-xs text-slate-300">
-{`VITE_MARKETPLACE_ADDRESS=0xYourMarketplaceAddress
+{`VITE_MARKETPLACE_ADDRESS=0x...
 VITE_MARKETPLACE_CHAIN_ID=11155111`}
               </pre>
-              <p className="text-xs text-slate-500">
-                Default chain is Sepolia (11155111). Restart the dev server after
-                updating env vars.
-              </p>
             </CardContent>
           </Card>
         </div>
@@ -259,21 +254,28 @@ VITE_MARKETPLACE_CHAIN_ID=11155111`}
               Buy & list NFTs
             </h1>
             <p className="mt-1 text-sm text-slate-400">
-              Powered by thirdweb MarketplaceV3 ·{" "}
+              Sepolia MarketplaceV3 ·{" "}
               <span className="font-mono text-xs text-slate-500">
                 {shortAddr(MARKETPLACE_ADDRESS)} · chain {marketplaceChain.id}
               </span>
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {!account && (
+            {!account ? (
               <Button
                 size="sm"
                 className="bg-indigo-600 text-white hover:bg-indigo-500"
+                disabled={isConnecting}
                 onClick={() => void connect({ client, wallets })}
               >
-                Connect wallet
+                <Wallet className="size-3.5" />
+                {isConnecting ? "Connecting…" : "Connect wallet"}
               </Button>
+            ) : (
+              <Badge className="h-8 items-center gap-1.5 border-emerald-400/20 bg-emerald-400/10 px-2.5 font-mono text-[11px] text-emerald-200">
+                <Wallet className="size-3" />
+                {shortAddr(account.address)}
+              </Badge>
             )}
             <Button
               size="sm"
@@ -289,6 +291,38 @@ VITE_MARKETPLACE_CHAIN_ID=11155111`}
             </Button>
           </div>
         </div>
+
+        {!account && (
+          <div className="flex gap-3 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-100">
+            <Info className="mt-0.5 size-4 shrink-0 text-indigo-300" />
+            <div className="space-y-1">
+              <p className="font-medium text-indigo-50">Wallet required for buy & list</p>
+              <p className="text-xs text-indigo-200/90">
+                Connect a wallet on <strong>Sepolia</strong>. Listing needs NFT
+                ownership and a one-time approval so the marketplace can transfer
+                the token. Buying needs Sepolia ETH for price + gas.
+              </p>
+              {user && !profile?.walletAddress && (
+                <p className="text-xs text-indigo-200/80">
+                  Tip: connect while signed in to{" "}
+                  <Link to="/settings" className="underline">
+                    link the wallet to your account
+                  </Link>
+                  .
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {account && user && profile?.walletAddress && (
+          <p className="text-xs text-slate-500">
+            Linked profile wallet:{" "}
+            <span className="font-mono text-slate-400">
+              {shortAddr(linkedWallet ?? undefined)}
+            </span>
+          </p>
+        )}
 
         {error && (
           <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
@@ -317,12 +351,13 @@ VITE_MARKETPLACE_CHAIN_ID=11155111`}
               </div>
             ) : listings.length === 0 ? (
               <Card className="rounded-lg border border-slate-800/80 bg-[#0b1220] py-12 text-center ring-0">
-                <CardContent className="space-y-2 px-4 text-sm text-slate-500">
+                <CardContent className="space-y-3 px-4 text-sm text-slate-500">
                   <ImageIcon className="mx-auto size-8 text-slate-600" />
-                  <p>No active listings yet.</p>
-                  <p className="text-xs">
-                    List an NFT from the panel on the right, or create listings
-                    in the thirdweb dashboard.
+                  <p className="text-slate-300">No active listings yet</p>
+                  <p className="mx-auto max-w-md text-xs leading-relaxed">
+                    Use the panel on the right with an NFT you own on Sepolia.
+                    Your wallet will prompt to <strong className="text-slate-400">approve</strong>{" "}
+                    the marketplace, then confirm the listing transaction.
                   </p>
                 </CardContent>
               </Card>
@@ -380,7 +415,7 @@ VITE_MARKETPLACE_CHAIN_ID=11155111`}
                             ) : (
                               <ShoppingBag className="size-3.5" />
                             )}
-                            Buy
+                            {account ? "Buy" : "Connect & buy"}
                           </Button>
                         </div>
                       </CardContent>
@@ -400,7 +435,7 @@ VITE_MARKETPLACE_CHAIN_ID=11155111`}
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4">
-                <form onSubmit={handleCreateListing} className="space-y-3">
+                <form onSubmit={(e) => void handleCreateListing(e)} className="space-y-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs text-slate-400">
                       NFT contract address
@@ -435,7 +470,7 @@ VITE_MARKETPLACE_CHAIN_ID=11155111`}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs text-slate-400">
-                      Price (native token)
+                      Price (Sepolia ETH)
                     </Label>
                     <Input
                       value={listingForm.price}
@@ -448,8 +483,9 @@ VITE_MARKETPLACE_CHAIN_ID=11155111`}
                     />
                   </div>
                   <p className="text-[10px] leading-relaxed text-slate-500">
-                    You must own the NFT and approve the marketplace to transfer
-                    it. Listing lasts 30 days by default.
+                    Wallet must own the NFT. First tx may be an{" "}
+                    <span className="text-slate-400">approval</span>; second
+                    creates the listing (30 days).
                   </p>
                   <Button
                     type="submit"
@@ -462,7 +498,7 @@ VITE_MARKETPLACE_CHAIN_ID=11155111`}
                     ) : (
                       <Tag className="size-3.5" />
                     )}
-                    Create listing
+                    {account ? "Create listing" : "Connect & list"}
                   </Button>
                 </form>
               </CardContent>
