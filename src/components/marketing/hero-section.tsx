@@ -19,7 +19,6 @@ const networks = [
 export function HeroSection() {
   return (
     <section id="product" className="relative overflow-hidden">
-      {/* Atmosphere */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,#05080f_0%,#070b14_100%)]" />
         <div className="absolute top-0 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-indigo-600/20 blur-[120px]" />
@@ -30,7 +29,8 @@ export function HeroSection() {
             backgroundImage:
               "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
             backgroundSize: "64px 64px",
-            maskImage: "radial-gradient(ellipse at 50% 0%, black 20%, transparent 70%)",
+            maskImage:
+              "radial-gradient(ellipse at 50% 0%, black 20%, transparent 70%)",
           }}
         />
       </div>
@@ -41,7 +41,9 @@ export function HeroSection() {
             <Sparkles className="size-3.5 text-indigo-300" />
             Multi-chain wallet intelligence
             <span className="hidden h-1 w-1 rounded-full bg-slate-600 sm:inline" />
-            <span className="hidden text-slate-500 sm:inline">Now with marketplace</span>
+            <span className="hidden text-slate-500 sm:inline">
+              Now with marketplace
+            </span>
           </div>
 
           <h1 className="text-balance text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl lg:leading-[1.05]">
@@ -65,7 +67,8 @@ export function HeroSection() {
               <ArrowRight className="size-4" />
             </Link>
             <Link
-              to="/login"\％n              className={cn(
+              to="/login"
+              className={cn(
                 buttonVariants({ variant: "outline", size: "lg" }),
                 "h-11 border-white/10 bg-white/[0.03] px-6 text-slate-200 backdrop-blur hover:bg-white/[0.06]"
               )}
@@ -74,7 +77,10 @@ export function HeroSection() {
             </Link>
           </div>
 
-          <div id="networks" className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+          <div
+            id="networks"
+            className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3"
+          >
             {networks.map((n) => (
               <span
                 key={n.label}
@@ -91,7 +97,6 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* Product frame */}
         <div className="relative mx-auto mt-14 max-w-5xl">
           <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-white/15 via-white/5 to-transparent" />
           <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0f1a] shadow-2xl shadow-black/50">
