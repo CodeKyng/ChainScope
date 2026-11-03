@@ -4,7 +4,6 @@ import { useActiveAccount } from "thirdweb/react"
 import {
   ArrowDownLeft,
   ArrowLeftRight,
-  ArrowRight,
   ArrowUpRight,
   Bell,
   Check,
@@ -16,7 +15,7 @@ import {
   Wallet,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/context/AuthContext"
 import { useNetwork } from "@/context/NetworkContext"
@@ -234,7 +233,6 @@ export default function LandingPage() {
   return (
     <div className="min-h-full bg-[#05080f] text-slate-100">
       <div className="mx-auto max-w-[1400px] space-y-5 px-4 py-6 sm:px-6 lg:px-8">
-        {/* Greeting */}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-indigo-300/90">Dashboard</p>
@@ -255,31 +253,29 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              asChild
-              size="sm"
-              variant="outline"
-              className="h-9 border-white/10 bg-white/[0.03]"
+            <Link
+              to="/explore"
+              className={cn(
+                buttonVariants({ size: "sm", variant: "outline" }),
+                "h-9 border-white/10 bg-white/[0.03]"
+              )}
             >
-              <Link to="/explore">
-                <Compass className="size-3.5" />
-                Explore
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="sm"
-              className="h-9 bg-white text-slate-950 hover:bg-slate-100"
+              <Compass className="size-3.5" />
+              Explore
+            </Link>
+            <Link
+              to="/wallet"
+              className={cn(
+                buttonVariants({ size: "sm" }),
+                "h-9 bg-white text-slate-950 hover:bg-slate-100"
+              )}
             >
-              <Link to="/wallet">
-                <Wallet className="size-3.5" />
-                Wallets
-              </Link>
-            </Button>
+              <Wallet className="size-3.5" />
+              Wallets
+            </Link>
           </div>
         </div>
 
-        {/* Hero wallet strip */}
         <section className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-br from-white/[0.05] via-transparent to-indigo-500/10 p-5 sm:p-6">
           <div className="pointer-events-none absolute -right-16 top-0 size-56 rounded-full bg-indigo-500/20 blur-3xl" />
           <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -352,7 +348,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Shortcuts */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {shortcuts.map((s) => {
             const Icon = s.icon
@@ -375,7 +370,6 @@ export default function LandingPage() {
           })}
         </div>
 
-        {/* Tabs content */}
         <Tabs defaultValue="portfolio" className="space-y-4">
           <div className="overflow-x-auto rounded-2xl border border-white/[0.07] bg-white/[0.02] px-2">
             <TabsList
@@ -486,12 +480,7 @@ export default function LandingPage() {
                   key={nft.name}
                   className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.03]"
                 >
-                  <div
-                    className={cn(
-                      "aspect-square bg-gradient-to-br",
-                      nft.art
-                    )}
-                  />
+                  <div className={cn("aspect-square bg-gradient-to-br", nft.art)} />
                   <div className="p-3">
                     <p className="text-sm font-medium text-white">{nft.name}</p>
                     <p className="text-[11px] text-slate-500">{nft.chain}</p>
@@ -524,7 +513,6 @@ export default function LandingPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Alerts teaser */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-4">
           <div className="flex items-center gap-3">
             <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
@@ -537,11 +525,20 @@ export default function LandingPage() {
               </p>
             </div>
           </div>
-          <Button asChild size="sm" variant="outline" className="border-white/10">
-            <Link to="/alerts">Open alerts</Link>
-          </Button>
+          <Link
+            to="/alerts"
+            className={cn(
+              buttonVariants({ size: "sm", variant: "outline" }),
+              "border-white/10"
+            )}
+          >
+            Open alerts
+          </Link>
         </div>
       </div>
     </div>
   )
 }
+
+// local import for ArrowRight used in shortcuts
+import { ArrowRight } from "lucide-react"
