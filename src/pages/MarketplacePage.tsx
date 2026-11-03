@@ -91,8 +91,8 @@ export default function MarketplacePage() {
     try {
       const data = await getAllValidListings({
         contract: marketplace,
-        start: 0,
-        count: 50,
+        start: 0n,
+        count: 50n,
       })
       setListings(data)
     } catch (err) {

@@ -49,7 +49,7 @@ function DropdownMenuContent({
           )}
           {...props}
         >
-          <MenuPrimitive.List className="outline-none">{children}</MenuPrimitive.List>
+          {children}
         </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>
