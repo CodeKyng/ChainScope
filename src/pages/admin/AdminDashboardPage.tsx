@@ -1,27 +1,53 @@
-import {
-  Activity,
-  Eye,
-  Shield,
-  Users,
-  Wallet,
-} from "lucide-react"
+import { useEffect } from "react"
+import { Activity, Eye, Shield, Users, Wallet } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
-const stats = [
-  { label: "Total users", value: "12,482", change: "+4.2%", icon: Users },
-  { label: "Active wallets", value: "8,914", change: "+2.8%", icon: Wallet },
-  { label: "Lookups (24h)", value: "41.2K", change: "+11.0%", icon: Eye },
-  { label: "API health", value: "99.9%", change: "Stable", icon: Activity },
-]
-
-const recentUsers = [
-  { email: "ada@example.com", plan: "Pro", joined: "2h ago" },
-  { email: "satoshi@mail.io", plan: "Free", joined: "5h ago" },
-  { email: "builder@dev.xyz", plan: "Pro", joined: "1d ago" },
-  { email: "analyst@funds.co", plan: "Team", joined: "1d ago" },
-]
+import { useUserData } from "@/context/UserDataContext"
+import { useNetwork } from "@/context/NetworkContext"
 
 export default function AdminDashboardPage() {
+  const { adminUsers, refreshAdminUsers, adminUsersLoading, watchlist } =
+    useUserData()
+  const { network } = useNetwork()
+
+  useEffect(() => {
+    void refreshAdminUsers()
+  }, [refreshAdminUsers])
+
+  const active = adminUsers.filter((u) => (u.status ?? "Active") === "Active")
+    .length
+  const suspended = adminUsers.length - active
+
+  const stats = [
+    {
+      label: "Registered users",
+      value: adminUsersLoading ? "…" : String(adminUsers.length),
+      change: `${active} active`,
+      icon: Users,
+    },
+    {
+      label: "Suspended",
+      value: adminUsersLoading ? "…" : String(Math.max(0, suspended)),
+      change: "From Firestore",
+      icon: Wallet,
+    },
+    {
+      label: "Your watchlist",
+      value: String(watchlist.length),
+      change: "Addresses tracked",
+      icon: Eye,
+    },
+    {
+      label: "Active network",
+      value: network.label,
+      change: `Chain ${network.chainId}`,
+      icon: Activity,
+    },
+  ]
+
+  const recentUsers = [...adminUsers]
+    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+    .slice(0, 6)
+
   return (
     <div className="min-h-full bg-[#070b14] px-4 py-5 text-slate-100 sm:px-6 lg:px-7">
       <div className="mx-auto max-w-[1400px] space-y-4">
@@ -67,23 +93,33 @@ export default function AdminDashboardPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="rounded-lg border border-slate-800/80 bg-[#0b1220] py-0 text-slate-100 ring-0">
             <CardHeader className="border-b border-slate-800/80 px-4 py-3">
-              <CardTitle className="text-sm">Recent signups</CardTitle>
+              <CardTitle className="text-sm">Recent users</CardTitle>
             </CardHeader>
             <CardContent className="divide-y divide-slate-800/80 p-0">
-              {recentUsers.map((u) => (
-                <div
-                  key={u.email}
-                  className="flex items-center justify-between px-4 py-3 text-sm"
-                >
-                  <div>
-                    <p className="text-slate-200">{u.email}</p>
-                    <p className="text-[11px] text-slate-500">{u.joined}</p>
+              {recentUsers.length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-slate-500">
+                  No Firestore users yet. New signups create a profile doc.
+                </p>
+              ) : (
+                recentUsers.map((u) => (
+                  <div
+                    key={u.uid}
+                    className="flex items-center justify-between px-4 py-3 text-sm"
+                  >
+                    <div>
+                      <p className="text-slate-200">
+                        {u.email || u.displayName || u.uid}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {u.role ?? "user"}
+                      </p>
+                    </div>
+                    <span className="rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">
+                      {u.plan ?? "Free"}
+                    </span>
                   </div>
-                  <span className="rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">
-                    {u.plan}
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
 
@@ -93,26 +129,18 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-2 px-4 text-sm">
               {[
-                ["Indexer (Ethereum)", "Operational"],
-                ["Indexer (Base)", "Operational"],
-                ["Indexer (Arbitrum)", "Degraded"],
                 ["Auth (Firebase)", "Operational"],
-                ["Wallet connect", "Operational"],
+                ["Firestore profiles", "Operational"],
+                ["Wallet connect (thirdweb)", "Operational"],
+                ["Marketplace (Sepolia)", "Operational"],
+                [`Network UI (${network.label})`, "Selected"],
               ].map(([name, status]) => (
                 <div
                   key={name}
                   className="flex items-center justify-between rounded-md border border-slate-800 px-3 py-2"
                 >
                   <span className="text-slate-300">{name}</span>
-                  <span
-                    className={
-                      status === "Operational"
-                        ? "text-emerald-300"
-                        : "text-amber-300"
-                    }
-                  >
-                    {status}
-                  </span>
+                  <span className="text-emerald-300">{status}</span>
                 </div>
               ))}
             </CardContent>

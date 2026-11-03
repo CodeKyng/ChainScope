@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useActiveAccount } from "thirdweb/react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -6,17 +6,44 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/context/AuthContext"
+import { useNetwork } from "@/context/NetworkContext"
+import { useUserData } from "@/context/UserDataContext"
+import { updateProfile } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 
 export default function SettingsPage() {
   const { user } = useAuth()
   const account = useActiveAccount()
-  const [displayName, setDisplayName] = useState(user?.displayName ?? "")
+  const { network } = useNetwork()
+  const { profile, saveProfile } = useUserData()
+  const [displayName, setDisplayName] = useState("")
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    setDisplayName(
+      profile?.displayName || user?.displayName || user?.email?.split("@")[0] || ""
+    )
+  }, [profile?.displayName, user?.displayName, user?.email])
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaved(true)
-    window.setTimeout(() => setSaved(false), 1600)
+    setError(null)
+    try {
+      if (auth.currentUser && displayName.trim()) {
+        await updateProfile(auth.currentUser, {
+          displayName: displayName.trim(),
+        })
+      }
+      await saveProfile({
+        displayName: displayName.trim(),
+        walletAddress: account?.address ?? profile?.walletAddress ?? null,
+      })
+      setSaved(true)
+      window.setTimeout(() => setSaved(false), 1600)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save")
+    }
   }
 
   return (
@@ -30,7 +57,7 @@ export default function SettingsPage() {
             Account preferences
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Manage how ChainScope identifies you and which networks you prefer.
+            Profile saves to Firebase Auth + Firestore when available.
           </p>
         </div>
 
@@ -39,7 +66,12 @@ export default function SettingsPage() {
             <CardTitle className="text-sm">Profile</CardTitle>
           </CardHeader>
           <CardContent className="px-4">
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={(e) => void handleSave(e)} className="space-y-4">
+              {error && (
+                <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+                  {error}
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="displayName" className="text-xs text-slate-400">
                   Display name
@@ -97,21 +129,21 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-3 px-4 text-sm text-slate-300">
             <div className="flex items-center justify-between rounded-md border border-slate-800 px-3 py-2.5">
-              <span>Default network</span>
+              <span>Active network</span>
               <Badge className="border-slate-700 bg-slate-800 text-[10px]">
-                Ethereum
+                {network.label}
               </Badge>
             </div>
             <div className="flex items-center justify-between rounded-md border border-slate-800 px-3 py-2.5">
-              <span>Currency display</span>
+              <span>Plan</span>
               <Badge className="border-slate-700 bg-slate-800 text-[10px]">
-                USD
+                {profile?.plan ?? "Free"}
               </Badge>
             </div>
             <div className="flex items-center justify-between rounded-md border border-slate-800 px-3 py-2.5">
-              <span>Email digests</span>
-              <Badge className="border-emerald-400/20 bg-emerald-400/10 text-[10px] text-emerald-300">
-                Weekly
+              <span>Role</span>
+              <Badge className="border-slate-700 bg-slate-800 text-[10px]">
+                {profile?.role ?? "user"}
               </Badge>
             </div>
           </CardContent>
