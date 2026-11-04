@@ -5,18 +5,31 @@ import {
   useConnectModal,
   useDisconnect,
 } from "thirdweb/react"
+import { updateProfile } from "firebase/auth"
+import {
+  Check,
+  Link2,
+  Settings2,
+  Shield,
+  Unplug,
+  User,
+  Wallet,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/context/AuthContext"
 import { useNetwork } from "@/context/NetworkContext"
 import { useUserData } from "@/context/UserDataContext"
-import { updateProfile } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { client, wallets } from "@/lib/thirdweb"
-import { Link2, Unplug, Wallet } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+function shortAddr(addr?: string | null) {
+  if (!addr) return "—"
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+}
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -32,7 +45,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setDisplayName(
-      profile?.displayName || user?.displayName || user?.email?.split("@")[0] || ""
+      profile?.displayName ||
+        user?.displayName ||
+        user?.email?.split("@")[0] ||
+        ""
     )
   }, [profile?.displayName, user?.displayName, user?.email])
 
@@ -61,7 +77,10 @@ export default function SettingsPage() {
     try {
       await connect({ client, wallets })
     } catch (err) {
-      if (err instanceof Error && !err.message.toLowerCase().includes("reject")) {
+      if (
+        err instanceof Error &&
+        !err.message.toLowerCase().includes("reject")
+      ) {
         setError(err.message)
       }
     }
@@ -82,32 +101,59 @@ export default function SettingsPage() {
     profile?.walletAddress?.toLowerCase() === account.address.toLowerCase()
 
   return (
-    <div className="min-h-full bg-[#070b14] px-4 py-5 text-slate-100 sm:px-6 lg:px-7">
-      <div className="mx-auto max-w-[720px] space-y-4">
-        <div>
-          <p className="text-[10px] font-semibold tracking-[0.18em] text-sky-300 uppercase">
+    <div className="min-h-full bg-[#070b14] text-slate-100">
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-slate-800/60">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-90"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99,102,241,0.18), transparent 55%), radial-gradient(ellipse 45% 40% at 90% 15%, rgba(56,189,248,0.08), transparent 50%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-[900px] px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/50 px-3 py-1 text-[11px] font-medium text-slate-300 backdrop-blur">
+            <Settings2 className="size-3.5 text-indigo-400" />
             Settings
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold text-white">
+            {profile?.plan && (
+              <>
+                <span className="text-slate-600">·</span>
+                <span>{profile.plan} plan</span>
+              </>
+            )}
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Account preferences
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Link email and wallet on one profile so marketplace and alerts share
-            the same identity.
+          <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400">
+            Link email and wallet on one profile so marketplace, watchlist, and
+            alerts share the same identity.
           </p>
         </div>
+      </section>
 
-        <Card className="rounded-lg border border-slate-800/80 bg-[#0b1220] py-4 text-slate-100 ring-0">
-          <CardHeader className="px-4 pb-2">
-            <CardTitle className="text-sm">Profile</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4">
-            <form onSubmit={(e) => void handleSave(e)} className="space-y-4">
-              {error && (
-                <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
-                  {error}
-                </div>
-              )}
+      <div className="mx-auto max-w-[900px] space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        {error && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
+            {error}
+          </div>
+        )}
+
+        {/* Profile */}
+        <section className="overflow-hidden rounded-2xl border border-slate-800/80 bg-[#0b1220]">
+          <div className="flex items-center gap-3 border-b border-slate-800/80 px-5 py-4">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
+              <User className="size-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white">Profile</h2>
+              <p className="text-[11px] text-slate-500">
+                Display name and email on your account
+              </p>
+            </div>
+          </div>
+          <form onSubmit={(e) => void handleSave(e)} className="space-y-5 p-5">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="displayName" className="text-xs text-slate-400">
                   Display name
@@ -116,7 +162,7 @@ export default function SettingsPage() {
                   id="displayName"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="h-9 border-slate-700 bg-slate-900 text-sm"
+                  className="h-10 rounded-xl border-slate-700 bg-slate-900/80 text-sm"
                   placeholder="Your name"
                 />
               </div>
@@ -125,107 +171,175 @@ export default function SettingsPage() {
                 <Input
                   value={user?.email ?? "Not signed in with email"}
                   disabled
-                  className="h-9 border-slate-700 bg-slate-900/50 text-sm text-slate-400"
+                  className="h-10 rounded-xl border-slate-700 bg-slate-900/40 text-sm text-slate-400"
                 />
               </div>
-              <div className="flex items-center gap-2 pt-1">
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="bg-indigo-600 text-white hover:bg-indigo-500"
-                >
-                  Save changes
-                </Button>
-                {saved && (
-                  <span className="text-xs text-emerald-300">Saved</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="submit"
+                className="h-10 rounded-full bg-white px-5 text-sm font-medium text-slate-900 hover:bg-slate-100"
+              >
+                {saved ? (
+                  <>
+                    <Check className="size-3.5" />
+                    Saved
+                  </>
+                ) : (
+                  "Save changes"
                 )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              </Button>
+              {saved && (
+                <span className="text-xs text-emerald-400">
+                  Profile updated
+                </span>
+              )}
+            </div>
+          </form>
+        </section>
 
-        <Card className="rounded-lg border border-slate-800/80 bg-[#0b1220] py-4 text-slate-100 ring-0">
-          <CardHeader className="px-4 pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Link2 className="size-4 text-indigo-300" />
-              Linked identity
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 px-4 text-sm">
-            <p className="text-xs text-slate-500">
+        {/* Linked identity */}
+        <section className="overflow-hidden rounded-2xl border border-slate-800/80 bg-[#0b1220]">
+          <div className="flex items-center gap-3 border-b border-slate-800/80 px-5 py-4">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-violet-500/15 text-violet-300">
+              <Link2 className="size-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white">
+                Linked identity
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                One account · email + wallet
+              </p>
+            </div>
+          </div>
+          <div className="space-y-4 p-5">
+            <p className="text-xs leading-relaxed text-slate-500">
               Sign in with email, then connect a wallet. We store the address on
               your user profile so both methods belong to one account.
             </p>
-            <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-800 px-3 py-2.5">
-              <Wallet className="size-4 text-slate-400" />
-              <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-300">
-                {linkedWallet ?? "No wallet linked"}
-              </span>
+
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-800/80 bg-slate-950/40 px-4 py-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-slate-800/80 text-slate-300">
+                <Wallet className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] tracking-wide text-slate-500 uppercase">
+                  Wallet
+                </p>
+                <p className="truncate font-mono text-sm text-slate-200">
+                  {linkedWallet ? shortAddr(linkedWallet) : "No wallet linked"}
+                </p>
+                {linkedWallet && linkedWallet.length > 12 && (
+                  <p className="mt-0.5 truncate font-mono text-[10px] text-slate-600">
+                    {linkedWallet}
+                  </p>
+                )}
+              </div>
               {isLinked ? (
-                <Badge className="border-emerald-400/20 bg-emerald-400/10 text-[10px] text-emerald-300">
+                <Badge className="border-emerald-400/25 bg-emerald-400/10 text-[10px] text-emerald-300">
                   Linked
                 </Badge>
               ) : account?.address ? (
-                <Badge className="border-amber-400/20 bg-amber-400/10 text-[10px] text-amber-200">
+                <Badge className="border-amber-400/25 bg-amber-400/10 text-[10px] text-amber-200">
                   Session only
                 </Badge>
               ) : null}
             </div>
+
             <div className="flex flex-wrap gap-2">
               {!account ? (
                 <Button
-                  size="sm"
-                  className="bg-indigo-600 text-white hover:bg-indigo-500"
+                  className="h-10 rounded-full bg-white px-5 text-sm font-medium text-slate-900 hover:bg-slate-100"
                   disabled={isConnecting || !user}
                   onClick={() => void linkWallet()}
                 >
+                  <Wallet className="size-3.5" />
                   {isConnecting ? "Connecting…" : "Connect & link wallet"}
                 </Button>
               ) : (
                 <Button
-                  size="sm"
                   variant="outline"
-                  className="border-slate-700 text-xs"
+                  className="h-10 rounded-full border-slate-700 bg-transparent px-5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
                   onClick={() => void unlinkSessionWallet()}
                 >
                   <Unplug className="size-3.5" />
                   Disconnect session
                 </Button>
               )}
-              {!user && (
-                <p className="w-full text-[11px] text-amber-200/90">
-                  Sign in with email first to persist the wallet on your profile.
-                </p>
-              )}
             </div>
-          </CardContent>
-        </Card>
+            {!user && (
+              <p className="text-[11px] text-amber-200/90">
+                Sign in with email first to persist the wallet on your profile.
+              </p>
+            )}
+          </div>
+        </section>
 
-        <Card className="rounded-lg border border-slate-800/80 bg-[#0b1220] py-4 text-slate-100 ring-0">
-          <CardHeader className="px-4 pb-2">
-            <CardTitle className="text-sm">Preferences</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 px-4 text-sm text-slate-300">
-            <div className="flex items-center justify-between rounded-md border border-slate-800 px-3 py-2.5">
-              <span>Active network</span>
-              <Badge className="border-slate-700 bg-slate-800 text-[10px]">
-                {network.label}
-              </Badge>
+        {/* Preferences */}
+        <section className="overflow-hidden rounded-2xl border border-slate-800/80 bg-[#0b1220]">
+          <div className="flex items-center gap-3 border-b border-slate-800/80 px-5 py-4">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
+              <Shield className="size-4" />
             </div>
-            <div className="flex items-center justify-between rounded-md border border-slate-800 px-3 py-2.5">
-              <span>Plan</span>
-              <Badge className="border-slate-700 bg-slate-800 text-[10px]">
-                {profile?.plan ?? "Free"}
-              </Badge>
+            <div>
+              <h2 className="text-sm font-semibold text-white">Preferences</h2>
+              <p className="text-[11px] text-slate-500">
+                Network, plan, and role
+              </p>
             </div>
-            <div className="flex items-center justify-between rounded-md border border-slate-800 px-3 py-2.5">
-              <span>Role</span>
-              <Badge className="border-slate-700 bg-slate-800 text-[10px]">
-                {profile?.role ?? "user"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="divide-y divide-slate-800/60">
+            {(
+              [
+                {
+                  label: "Active network",
+                  value: network.label,
+                  hint: "Change from the header selector",
+                },
+                {
+                  label: "Plan",
+                  value: profile?.plan ?? "Free",
+                  hint: null,
+                },
+                {
+                  label: "Role",
+                  value: profile?.role ?? "user",
+                  hint: null,
+                },
+                {
+                  label: "Account status",
+                  value: profile?.status ?? "Active",
+                  hint: null,
+                },
+              ] as const
+            ).map((row) => (
+              <div
+                key={row.label}
+                className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5"
+              >
+                <div>
+                  <p className="text-sm text-slate-200">{row.label}</p>
+                  {row.hint && (
+                    <p className="text-[11px] text-slate-500">{row.hint}</p>
+                  )}
+                </div>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "border-slate-700 bg-slate-800/60 text-[11px] font-medium capitalize text-slate-300",
+                    row.label === "Account status" &&
+                      (profile?.status === "Suspended"
+                        ? "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300")
+                  )}
+                >
+                  {row.value}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   )
