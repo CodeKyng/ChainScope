@@ -152,14 +152,16 @@ export function AppLayout() {
                   if (v) setNetworkId(v as NetworkId)
                 }}
               >
-                <SelectTrigger className="h-8 w-auto min-w-[7.5rem] max-w-[10rem] border-slate-700 bg-slate-900/70 text-xs sm:min-w-[8.5rem]">
+                <SelectTrigger className="h-8 w-auto min-w-[7.5rem] max-w-[11rem] border-slate-700 bg-slate-900/70 text-xs sm:min-w-[9rem]">
                   <SelectValue>
                     <span className="flex items-center gap-1.5">
-                      <NetworkIcon
-                        networkId={networkId}
-                        sizeClass="size-4"
-                      />
+                      <NetworkIcon networkId={networkId} sizeClass="size-4" />
                       <span className="truncate">{network.label}</span>
+                      {network.testnet && (
+                        <span className="rounded bg-amber-500/20 px-1 py-px text-[9px] font-semibold text-amber-300">
+                          Test
+                        </span>
+                      )}
                     </span>
                   </SelectValue>
                 </SelectTrigger>
@@ -174,6 +176,11 @@ export function AppLayout() {
                             sizeClass="size-4"
                           />
                           {item.label}
+                          {item.testnet && (
+                            <span className="rounded bg-amber-500/20 px-1 py-px text-[9px] font-semibold text-amber-300">
+                              Test
+                            </span>
+                          )}
                         </span>
                       </SelectItem>
                     ))}

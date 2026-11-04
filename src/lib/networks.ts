@@ -6,6 +6,7 @@ import solanaLogo from "@/assets/solana.png"
 
 export type NetworkId =
   | "ethereum"
+  | "sepolia"
   | "base"
   | "arbitrum"
   | "polygon"
@@ -21,6 +22,8 @@ export type NetworkDef = {
   rpc: string
   /** Brand color for letter fallbacks */
   color: string
+  /** True for testnets (Sepolia, etc.) */
+  testnet?: boolean
 }
 
 export const NETWORKS: NetworkDef[] = [
@@ -33,6 +36,18 @@ export const NETWORKS: NetworkDef[] = [
     explorer: "https://etherscan.io",
     rpc: "https://eth.llamarpc.com",
     color: "#627EEA",
+  },
+  {
+    id: "sepolia",
+    label: "Sepolia",
+    value: "sepolia",
+    // Same brand mark as Ethereum; labeled as testnet in the UI
+    logo: ethereumLogo,
+    chainId: "11155111",
+    explorer: "https://sepolia.etherscan.io",
+    rpc: "https://rpc.sepolia.org",
+    color: "#CFB5F0",
+    testnet: true,
   },
   {
     id: "base",

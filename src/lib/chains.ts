@@ -13,14 +13,14 @@ export function getThirdwebChain(networkId: NetworkId | string): Chain | null {
   switch (networkId) {
     case "ethereum":
       return ethereum
+    case "sepolia":
+      return sepolia
     case "base":
       return base
     case "arbitrum":
       return arbitrum
     case "polygon":
       return polygon
-    case "sepolia":
-      return sepolia
     case "solana":
       return null
     default:
@@ -30,6 +30,7 @@ export function getThirdwebChain(networkId: NetworkId | string): Chain | null {
 
 export const EVM_NETWORK_IDS: NetworkId[] = [
   "ethereum",
+  "sepolia",
   "base",
   "arbitrum",
   "polygon",
