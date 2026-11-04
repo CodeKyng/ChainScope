@@ -6,6 +6,7 @@ import {
   useDisconnect,
 } from "thirdweb/react"
 import { AppSidebar, type PageKey } from "@/components/appSidebar"
+import { NetworkIcon } from "@/components/NetworkIcon"
 import {
   SidebarInset,
   SidebarProvider,
@@ -73,7 +74,7 @@ export function AppLayout() {
   const account = useActiveAccount()
   const wallet = useActiveWallet()
   const { disconnect } = useDisconnect()
-  const { networkId, setNetworkId, networks } = useNetwork()
+  const { networkId, setNetworkId, networks, network } = useNetwork()
   const { notifications, unreadCount, markAllNotificationsRead } = useUserData()
   const [search, setSearch] = useState("")
 
@@ -126,44 +127,51 @@ export function AppLayout() {
       <AppSidebar currentPage={currentPage} />
       <SidebarInset className="bg-[#070b14]">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-800/80 bg-[#070b14] px-4 text-slate-100">
-          <SidebarTrigger className="mr-4 -ml-1" />
-          <div className="flex min-w-0 flex-1 items-center justify-between gap-3 text-sm text-muted-foreground">
+          <SidebarTrigger className="mr-1 -ml-1 shrink-0" />
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-2 text-sm text-muted-foreground sm:gap-3">
             <form
               onSubmit={handleSearch}
               className="min-w-0 flex-1 font-medium text-foreground"
             >
-              <InputGroup className="w-full border-slate-700 bg-slate-900/70 sm:w-lg">
+              <InputGroup className="w-full max-w-full border-slate-700 bg-slate-900/70 sm:max-w-md lg:max-w-lg">
                 <InputGroupAddon>
-                  <Search />
+                  <Search className="size-4" />
                 </InputGroupAddon>
                 <InputGroupInput
                   className="text-xs placeholder:text-slate-500"
-                  placeholder="Search wallet address, ENS, tokens or collection..."
+                  placeholder="Search address, ENS, tokens…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </InputGroup>
             </form>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <Select
                 value={networkId}
                 onValueChange={(v) => {
                   if (v) setNetworkId(v as NetworkId)
                 }}
               >
-                <SelectTrigger className="h-8 w-32 border-slate-700 bg-slate-900/70 text-xs sm:w-36">
-                  <SelectValue placeholder="Network" />
+                <SelectTrigger className="h-8 w-auto min-w-[7.5rem] max-w-[10rem] border-slate-700 bg-slate-900/70 text-xs sm:min-w-[8.5rem]">
+                  <SelectValue>
+                    <span className="flex items-center gap-1.5">
+                      <NetworkIcon
+                        networkId={networkId}
+                        sizeClass="size-4"
+                      />
+                      <span className="truncate">{network.label}</span>
+                    </span>
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="border border-slate-700 bg-slate-900 text-slate-100">
                   <SelectGroup>
                     <SelectLabel>Networks</SelectLabel>
                     {networks.map((item) => (
                       <SelectItem key={item.value} value={item.value}>
                         <span className="flex items-center gap-2">
-                          <img
-                            src={item.logo}
-                            alt={item.label}
-                            className="size-4 rounded-full object-cover"
+                          <NetworkIcon
+                            networkId={item.id}
+                            sizeClass="size-4"
                           />
                           {item.label}
                         </span>
@@ -180,7 +188,7 @@ export function AppLayout() {
                 >
                   <Bell className="size-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 flex size-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white">
+                    <span className="absolute top-0.5 right-0.5 flex size-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
@@ -286,7 +294,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1">
+        <main className="flex-1 overflow-x-hidden">
           <Outlet />
         </main>
       </SidebarInset>

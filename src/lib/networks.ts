@@ -19,6 +19,8 @@ export type NetworkDef = {
   chainId: string
   explorer: string
   rpc: string
+  /** Brand color for letter fallbacks */
+  color: string
 }
 
 export const NETWORKS: NetworkDef[] = [
@@ -30,6 +32,7 @@ export const NETWORKS: NetworkDef[] = [
     chainId: "1",
     explorer: "https://etherscan.io",
     rpc: "https://eth.llamarpc.com",
+    color: "#627EEA",
   },
   {
     id: "base",
@@ -39,6 +42,7 @@ export const NETWORKS: NetworkDef[] = [
     chainId: "8453",
     explorer: "https://basescan.org",
     rpc: "https://mainnet.base.org",
+    color: "#0052FF",
   },
   {
     id: "arbitrum",
@@ -48,6 +52,7 @@ export const NETWORKS: NetworkDef[] = [
     chainId: "42161",
     explorer: "https://arbiscan.io",
     rpc: "https://arb1.arbitrum.io/rpc",
+    color: "#28A0F0",
   },
   {
     id: "polygon",
@@ -57,6 +62,7 @@ export const NETWORKS: NetworkDef[] = [
     chainId: "137",
     explorer: "https://polygonscan.com",
     rpc: "https://polygon-rpc.com",
+    color: "#8247E5",
   },
   {
     id: "solana",
@@ -66,6 +72,7 @@ export const NETWORKS: NetworkDef[] = [
     chainId: "mainnet-beta",
     explorer: "https://solscan.io",
     rpc: "https://api.mainnet-beta.solana.com",
+    color: "#9945FF",
   },
 ]
 
