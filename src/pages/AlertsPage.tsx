@@ -147,7 +147,9 @@ export default function AlertsPage() {
         <div
           className={cn(
             "grid gap-8",
-            showRules && showFeed ? "lg:grid-cols-[1.15fr_0.85fr]" : "grid-cols-1"
+            showRules && showFeed
+              ? "lg:grid-cols-[1.15fr_0.85fr]"
+              : "grid-cols-1"
           )}
         >
           {/* Alert rules */}
@@ -269,12 +271,12 @@ export default function AlertsPage() {
                       Add a watchlist item or toggle rules to start receiving
                       in-app alerts.
                     </p>
-                    <Button
-                      asChild
-                      className="mt-5 h-9 rounded-full bg-white px-4 text-xs font-medium text-slate-900 hover:bg-slate-100"
+                    <Link
+                      to="/watchlist"
+                      className="mt-5 inline-flex h-9 items-center justify-center rounded-full bg-white px-4 text-xs font-medium text-slate-900 transition hover:bg-slate-100"
                     >
-                      <Link to="/watchlist">Go to Watchlist</Link>
-                    </Button>
+                      Go to Watchlist
+                    </Link>
                   </div>
                 ) : (
                   <ul className="divide-y divide-slate-800/60">
