@@ -7,6 +7,7 @@ import {
 } from "thirdweb/react"
 import { AppSidebar, type PageKey } from "@/components/appSidebar"
 import { NetworkIcon } from "@/components/NetworkIcon"
+import { NotificationBell } from "@/components/NotificationBell"
 import {
   SidebarInset,
   SidebarProvider,
@@ -26,7 +27,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import { Bell, LogOut, Search } from "lucide-react"
+import { LogOut, Search } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -39,7 +40,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/context/AuthContext"
 import { useNetwork } from "@/context/NetworkContext"
-import { useUserData } from "@/context/UserDataContext"
 import type { NetworkId } from "@/lib/networks"
 
 function shortAddress(address: string) {
@@ -59,14 +59,6 @@ function pageFromPath(pathname: string): PageKey {
   return "landing"
 }
 
-function timeAgo(ts: number) {
-  const s = Math.floor((Date.now() - ts) / 1000)
-  if (s < 60) return `${s}s ago`
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
-  return `${Math.floor(s / 86400)}d ago`
-}
-
 export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -75,7 +67,6 @@ export function AppLayout() {
   const wallet = useActiveWallet()
   const { disconnect } = useDisconnect()
   const { networkId, setNetworkId, networks, network } = useNetwork()
-  const { notifications, unreadCount, markAllNotificationsRead } = useUserData()
   const [search, setSearch] = useState("")
 
   const currentPage = pageFromPath(location.pathname)
@@ -188,69 +179,7 @@ export function AppLayout() {
                 </SelectContent>
               </Select>
 
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger
-                  className="relative inline-flex size-8 items-center justify-center rounded-md text-slate-300 outline-none hover:bg-slate-800 hover:text-white focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="Notifications"
-                >
-                  <Bell className="size-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-0.5 right-0.5 flex size-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  sideOffset={8}
-                  className="w-72 border border-slate-700 bg-slate-900 text-slate-100 shadow-xl"
-                >
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel className="flex items-center justify-between font-normal">
-                      <span className="text-sm font-medium">Notifications</span>
-                      {unreadCount > 0 && (
-                        <button
-                          type="button"
-                          className="text-[10px] text-indigo-300 hover:underline"
-                          onClick={() => void markAllNotificationsRead()}
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                    </DropdownMenuLabel>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator className="bg-slate-700" />
-                  {notifications.length === 0 ? (
-                    <div className="px-3 py-6 text-center text-xs text-slate-500">
-                      No notifications yet
-                    </div>
-                  ) : (
-                    notifications.slice(0, 6).map((n) => (
-                      <DropdownMenuItem
-                        key={n.id}
-                        className="flex cursor-default flex-col items-start gap-0.5 py-2"
-                        onClick={() => navigate("/alerts")}
-                      >
-                        <span
-                          className={`text-xs ${n.read ? "text-slate-400" : "text-slate-100"}`}
-                        >
-                          {n.text}
-                        </span>
-                        <span className="text-[10px] text-slate-500">
-                          {timeAgo(n.time)}
-                        </span>
-                      </DropdownMenuItem>
-                    ))
-                  )}
-                  <DropdownMenuSeparator className="bg-slate-700" />
-                  <DropdownMenuItem
-                    className="justify-center text-xs text-indigo-300"
-                    onClick={() => navigate("/alerts")}
-                  >
-                    View all alerts
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <NotificationBell />
 
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b14]">

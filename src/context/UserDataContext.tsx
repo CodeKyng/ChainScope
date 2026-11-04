@@ -127,13 +127,19 @@ type UserDataContextType = {
   removeWatchItem: (id: string) => Promise<void>
   toggleAlertRule: (id: string) => Promise<void>
   markAllNotificationsRead: () => Promise<void>
+  markNotificationRead: (id: string) => Promise<void>
+  clearNotifications: () => Promise<void>
   pushNotification: (text: string) => Promise<void>
-  saveProfile: (data: Partial<Pick<UserProfile, "displayName" | "walletAddress">>) => Promise<void>
+  saveProfile: (
+    data: Partial<Pick<UserProfile, "displayName" | "walletAddress">>
+  ) => Promise<void>
   setUserStatus: (uid: string, status: "Active" | "Suspended") => Promise<void>
   refreshAdminUsers: () => Promise<void>
 }
 
-const UserDataContext = createContext<UserDataContextType | undefined>(undefined)
+const UserDataContext = createContext<UserDataContextType | undefined>(
+  undefined
+)
 
 export function UserDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
@@ -148,12 +154,14 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   const [adminUsers, setAdminUsers] = useState<UserProfile[]>([])
   const [adminUsersLoading, setAdminUsersLoading] = useState(false)
   const linkedNotifyRef = useRef<string | null>(null)
+  const welcomeSentRef = useRef(false)
 
   useEffect(() => {
     setWatchlist(loadJson(storageKey(uid, "watchlist"), []))
     setAlertRules(loadJson(storageKey(uid, "alertRules"), DEFAULT_RULES))
     setNotifications(loadJson(storageKey(uid, "notifications"), []))
     setLoading(false)
+    welcomeSentRef.current = false
 
     if (!uid) {
       setProfile(null)
@@ -238,6 +246,15 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     [uid]
   )
 
+  const persistNotifications = useCallback(
+    async (list: AppNotification[]) => {
+      setNotifications(list)
+      saveJson(storageKey(uid, "notifications"), list)
+      await persistUserFields({ notifications: list })
+    },
+    [uid, persistUserFields]
+  )
+
   const saveProfile = useCallback(
     async (
       data: Partial<Pick<UserProfile, "displayName" | "walletAddress">>
@@ -261,26 +278,34 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       if (linkedNotifyRef.current !== addr) {
         linkedNotifyRef.current = addr
         const n: AppNotification = {
-          id: `${Date.now()}`,
+          id: `link-${Date.now()}`,
           text: `Wallet ${addr.slice(0, 6)}...${addr.slice(-4)} linked to your account`,
           time: Date.now(),
           read: false,
         }
         const list = [n, ...notifications].slice(0, 50)
-        setNotifications(list)
-        saveJson(storageKey(uid, "notifications"), list)
-        await persistUserFields({ notifications: list, walletAddress: addr })
+        await persistNotifications(list)
       }
     })()
-  }, [
-    uid,
-    account?.address,
-    profile?.walletAddress,
-    profile,
-    saveProfile,
-    notifications,
-    persistUserFields,
-  ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on wallet change
+  }, [uid, account?.address, profile?.walletAddress])
+
+  // One-time welcome notice so the bell is never empty for new sessions
+  useEffect(() => {
+    if (loading || welcomeSentRef.current) return
+    if (notifications.length > 0) {
+      welcomeSentRef.current = true
+      return
+    }
+    welcomeSentRef.current = true
+    const n: AppNotification = {
+      id: `welcome-${uid ?? "anon"}`,
+      text: "Welcome to ChainScope — connect a wallet and add addresses to your watchlist to get activity alerts here.",
+      time: Date.now(),
+      read: false,
+    }
+    void persistNotifications([n])
+  }, [loading, notifications.length, uid, persistNotifications])
 
   const addWatchItem = useCallback(
     async (item: Omit<WatchItem, "id" | "createdAt">) => {
@@ -321,25 +346,35 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
 
   const markAllNotificationsRead = useCallback(async () => {
     const n = notifications.map((x) => ({ ...x, read: true }))
-    setNotifications(n)
-    saveJson(storageKey(uid, "notifications"), n)
-    await persistUserFields({ notifications: n })
-  }, [notifications, uid, persistUserFields])
+    await persistNotifications(n)
+  }, [notifications, persistNotifications])
+
+  const markNotificationRead = useCallback(
+    async (id: string) => {
+      const n = notifications.map((x) =>
+        x.id === id ? { ...x, read: true } : x
+      )
+      await persistNotifications(n)
+    },
+    [notifications, persistNotifications]
+  )
+
+  const clearNotifications = useCallback(async () => {
+    await persistNotifications([])
+  }, [persistNotifications])
 
   const pushNotification = useCallback(
     async (text: string) => {
       const n: AppNotification = {
-        id: `${Date.now()}`,
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         text,
         time: Date.now(),
         read: false,
       }
       const list = [n, ...notifications].slice(0, 50)
-      setNotifications(list)
-      saveJson(storageKey(uid, "notifications"), list)
-      await persistUserFields({ notifications: list })
+      await persistNotifications(list)
     },
-    [notifications, uid, persistUserFields]
+    [notifications, persistNotifications]
   )
 
   const refreshAdminUsers = useCallback(async () => {
@@ -381,8 +416,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     [notifications]
   )
 
-  const linkedWallet =
-    account?.address ?? profile?.walletAddress ?? null
+  const linkedWallet = account?.address ?? profile?.walletAddress ?? null
 
   const value = useMemo(
     () => ({
@@ -399,6 +433,8 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       removeWatchItem,
       toggleAlertRule,
       markAllNotificationsRead,
+      markNotificationRead,
+      clearNotifications,
       pushNotification,
       saveProfile,
       setUserStatus,
@@ -418,6 +454,8 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       removeWatchItem,
       toggleAlertRule,
       markAllNotificationsRead,
+      markNotificationRead,
+      clearNotifications,
       pushNotification,
       saveProfile,
       setUserStatus,
