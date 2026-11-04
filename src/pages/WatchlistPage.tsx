@@ -9,6 +9,7 @@ import {
   Trash2,
   Wallet,
 } from "lucide-react"
+import { NetworkIcon } from "@/components/NetworkIcon"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -76,7 +77,6 @@ export default function WatchlistPage() {
 
   return (
     <div className="min-h-full bg-[#070b14] text-slate-100">
-      {/* Hero */}
       <section className="relative overflow-hidden border-b border-slate-800/60">
         <div
           className="pointer-events-none absolute inset-0 opacity-90"
@@ -114,7 +114,6 @@ export default function WatchlistPage() {
             </Button>
           </div>
 
-          {/* Search + network chips */}
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative max-w-md flex-1">
               <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-500" />
@@ -150,11 +149,7 @@ export default function WatchlistPage() {
                       : "border border-slate-700/80 bg-slate-900/40 text-slate-400 hover:border-slate-600 hover:text-slate-200"
                   )}
                 >
-                  <img
-                    src={n.logo}
-                    alt=""
-                    className="size-3.5 rounded-full object-cover"
-                  />
+                  <NetworkIcon networkId={n.id} sizeClass="size-3.5" />
                   {n.label}
                 </button>
               ))}
@@ -164,7 +159,6 @@ export default function WatchlistPage() {
       </section>
 
       <div className="mx-auto max-w-[1400px] space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        {/* Add form */}
         {showForm && (
           <form
             onSubmit={(e) => void addItem(e)}
@@ -208,17 +202,21 @@ export default function WatchlistPage() {
                   onValueChange={(v) => v && setItemNetwork(v as NetworkId)}
                 >
                   <SelectTrigger className="h-10 rounded-xl border-slate-700 bg-slate-900/80 text-xs">
-                    <SelectValue />
+                    <SelectValue>
+                      <span className="flex items-center gap-2">
+                        <NetworkIcon
+                          networkId={itemNetwork}
+                          sizeClass="size-4"
+                        />
+                        {getNetwork(itemNetwork).label}
+                      </span>
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {networks.map((n) => (
                       <SelectItem key={n.id} value={n.id}>
                         <span className="flex items-center gap-2">
-                          <img
-                            src={n.logo}
-                            alt=""
-                            className="size-4 rounded-full object-cover"
-                          />
+                          <NetworkIcon networkId={n.id} sizeClass="size-4" />
                           {n.label}
                         </span>
                       </SelectItem>
@@ -239,7 +237,6 @@ export default function WatchlistPage() {
           </form>
         )}
 
-        {/* Cards */}
         <section>
           <div className="mb-4 flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-300">
@@ -288,10 +285,10 @@ export default function WatchlistPage() {
                     className="group flex flex-col overflow-hidden rounded-2xl border border-slate-800/80 bg-[#0b1220] p-4 transition hover:border-slate-700 hover:bg-[#0d1524]"
                   >
                     <div className="flex items-start gap-3">
-                      <img
-                        src={net.logo}
-                        alt=""
-                        className="size-11 shrink-0 rounded-xl object-cover ring-1 ring-slate-700/80"
+                      <NetworkIcon
+                        networkId={item.network}
+                        sizeClass="size-11"
+                        className="rounded-xl"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
