@@ -1,5 +1,5 @@
 import { createThirdwebClient, getContract, type ThirdwebContract } from "thirdweb"
-import { defineChain, sepolia } from "thirdweb/chains"
+import { baseSepolia, defineChain, sepolia } from "thirdweb/chains"
 import { createWallet, inAppWallet } from "thirdweb/wallets"
 
 export const client = createThirdwebClient({
@@ -32,26 +32,34 @@ export const wallets = [
 ]
 
 /**
- * Marketplace chain — set VITE_MARKETPLACE_CHAIN_ID (default Sepolia 11155111).
- * We override Sepolia with a public RPC so contract reads/writes do not depend
- * on thirdweb RPC Edge domain allowlisting (which causes 401 Unauthorized
- * when the Vercel domain is not listed on the Client ID).
+ * Marketplace chain — set VITE_MARKETPLACE_CHAIN_ID
+ * Default: Base Sepolia (84532) — matches deployed MarketplaceV3.
+ * Public RPC override avoids thirdweb RPC Edge 401 when domain is not allowlisted.
  */
 const chainId = Number(
-  import.meta.env.VITE_MARKETPLACE_CHAIN_ID ?? "11155111"
+  import.meta.env.VITE_MARKETPLACE_CHAIN_ID ?? "84532"
 )
+
+const BASE_SEPOLIA_PUBLIC_RPC =
+  (import.meta.env.VITE_BASE_SEPOLIA_RPC_URL as string | undefined)?.trim() ||
+  "https://sepolia.base.org"
 
 const SEPOLIA_PUBLIC_RPC =
   (import.meta.env.VITE_SEPOLIA_RPC_URL as string | undefined)?.trim() ||
   "https://ethereum-sepolia-rpc.publicnode.com"
 
 export const marketplaceChain =
-  chainId === 11155111
+  chainId === 84532
     ? defineChain({
-        ...sepolia,
-        rpc: SEPOLIA_PUBLIC_RPC,
+        ...baseSepolia,
+        rpc: BASE_SEPOLIA_PUBLIC_RPC,
       })
-    : defineChain(chainId)
+    : chainId === 11155111
+      ? defineChain({
+          ...sepolia,
+          rpc: SEPOLIA_PUBLIC_RPC,
+        })
+      : defineChain(chainId)
 
 /** MarketplaceV3 contract address from thirdweb dashboard */
 export const MARKETPLACE_ADDRESS = (
@@ -63,6 +71,7 @@ let _marketplaceContract: ThirdwebContract | null | undefined
 
 export function getMarketplaceContract() {
   if (!MARKETPLACE_ADDRESS) return null
+  // Reset cache if address/chain env changed between HMR (dev only)
   if (_marketplaceContract === undefined) {
     _marketplaceContract = getContract({
       client,
