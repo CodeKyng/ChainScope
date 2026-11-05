@@ -31,12 +31,27 @@ export const wallets = [
   createWallet("io.rabby"),
 ]
 
-/** Marketplace chain — set VITE_MARKETPLACE_CHAIN_ID (default Sepolia 11155111) */
+/**
+ * Marketplace chain — set VITE_MARKETPLACE_CHAIN_ID (default Sepolia 11155111).
+ * We override Sepolia with a public RPC so contract reads/writes do not depend
+ * on thirdweb RPC Edge domain allowlisting (which causes 401 Unauthorized
+ * when the Vercel domain is not listed on the Client ID).
+ */
 const chainId = Number(
   import.meta.env.VITE_MARKETPLACE_CHAIN_ID ?? "11155111"
 )
+
+const SEPOLIA_PUBLIC_RPC =
+  (import.meta.env.VITE_SEPOLIA_RPC_URL as string | undefined)?.trim() ||
+  "https://ethereum-sepolia-rpc.publicnode.com"
+
 export const marketplaceChain =
-  chainId === 11155111 ? sepolia : defineChain(chainId)
+  chainId === 11155111
+    ? defineChain({
+        ...sepolia,
+        rpc: SEPOLIA_PUBLIC_RPC,
+      })
+    : defineChain(chainId)
 
 /** MarketplaceV3 contract address from thirdweb dashboard */
 export const MARKETPLACE_ADDRESS = (
