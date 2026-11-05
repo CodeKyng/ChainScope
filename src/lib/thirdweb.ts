@@ -1,4 +1,4 @@
-import { createThirdwebClient, getContract } from "thirdweb"
+import { createThirdwebClient, getContract, type ThirdwebContract } from "thirdweb"
 import { defineChain, sepolia } from "thirdweb/chains"
 import { createWallet, inAppWallet } from "thirdweb/wallets"
 
@@ -43,11 +43,17 @@ export const MARKETPLACE_ADDRESS = (
   import.meta.env.VITE_MARKETPLACE_ADDRESS ?? ""
 ).trim()
 
+/** Cached so callers get a stable reference across renders */
+let _marketplaceContract: ThirdwebContract | null | undefined
+
 export function getMarketplaceContract() {
   if (!MARKETPLACE_ADDRESS) return null
-  return getContract({
-    client,
-    chain: marketplaceChain,
-    address: MARKETPLACE_ADDRESS,
-  })
+  if (_marketplaceContract === undefined) {
+    _marketplaceContract = getContract({
+      client,
+      chain: marketplaceChain,
+      address: MARKETPLACE_ADDRESS,
+    })
+  }
+  return _marketplaceContract
 }
