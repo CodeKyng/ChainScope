@@ -39,6 +39,20 @@ import {
 } from "@/lib/thirdweb"
 import { cn } from "@/lib/utils"
 
+const CHAIN_LABEL =
+  marketplaceChain.id === 84532
+    ? "Base Sepolia"
+    : marketplaceChain.id === 11155111
+      ? "Sepolia"
+      : `Chain ${marketplaceChain.id}`
+
+const EXPLORER_BASE =
+  marketplaceChain.id === 84532
+    ? "https://sepolia.basescan.org"
+    : marketplaceChain.id === 11155111
+      ? "https://sepolia.etherscan.io"
+      : "https://etherscan.io"
+
 function shortAddr(addr?: string) {
   if (!addr) return "—"
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
@@ -72,6 +86,19 @@ function nftName(listing: DirectListing) {
   return meta?.name || `Token #${listing.tokenId.toString()}`
 }
 
+function friendlyLoadError(raw: string): string {
+  if (/zero data|decode zero|AbiDecodingZeroData|"0x"/i.test(raw)) {
+    return `No MarketplaceV3 bytecode at ${MARKETPLACE_ADDRESS} on ${CHAIN_LABEL} (chain ${marketplaceChain.id}). Confirm the contract is deployed on Base Sepolia and VITE_MARKETPLACE_ADDRESS / VITE_MARKETPLACE_CHAIN_ID=84532 are set on Vercel.`
+  }
+  if (/401|Unauthorized/i.test(raw)) {
+    return `${raw} — allowlist your production domain on the thirdweb Client ID, or keep using the public Base Sepolia RPC.`
+  }
+  if (/network|chain|wrong chain|switch/i.test(raw)) {
+    return `${raw} — switch your wallet to ${CHAIN_LABEL} (chain id ${marketplaceChain.id}).`
+  }
+  return raw
+}
+
 type MarketTab = "all" | "listed" | "list"
 
 export default function MarketplacePage() {
@@ -95,6 +122,7 @@ export default function MarketplacePage() {
   const [query, setQuery] = useState("")
   const [tab, setTab] = useState<MarketTab>("all")
 
+  // Stable reference — getMarketplaceContract() is module-cached; useMemo keeps the dep fixed.
   const marketplace = useMemo(() => getMarketplaceContract(), [])
 
   const loadListings = useCallback(async () => {
@@ -111,19 +139,14 @@ export default function MarketplacePage() {
     } catch (err) {
       const raw =
         err instanceof Error ? err.message : "Failed to load listings"
-      const message =
-        /zero data|0x"|decode zero|AbiDecodingZeroData/i.test(raw)
-          ? `No MarketplaceV3 contract at ${MARKETPLACE_ADDRESS} on chain ${marketplaceChain.id}. Deploy MarketplaceV3 on Sepolia in the thirdweb dashboard, then set VITE_MARKETPLACE_ADDRESS on Vercel to the new address.`
-          : /401|Unauthorized/i.test(raw)
-            ? `${raw} — allowlist your Vercel domain on the thirdweb Client ID.`
-            : raw
-      setError(message)
+      setError(friendlyLoadError(raw))
       setListings([])
     } finally {
       setLoading(false)
     }
   }, [marketplace])
 
+  // Mount-only load. Refresh button + post-list/post-buy call loadListings explicitly.
   useEffect(() => {
     void loadListings()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only on mount
@@ -158,7 +181,7 @@ export default function MarketplacePage() {
     const buyer = account?.address
     if (!buyer) {
       setError(
-        "Connect a wallet (Sepolia) to buy. Approve the purchase in your wallet when prompted."
+        `Connect a wallet on ${CHAIN_LABEL} to buy. Approve the purchase when prompted.`
       )
       return
     }
@@ -178,11 +201,13 @@ export default function MarketplacePage() {
       await loadListings()
     } catch (err) {
       const message = err instanceof Error ? err.message : "Purchase failed"
-      if (!message.toLowerCase().includes("reject")) {
+      if (!/reject|denied|cancel/i.test(message)) {
         setError(
-          message.toLowerCase().includes("insufficient")
-            ? `${message} — ensure you have Sepolia ETH for gas and the listing price.`
-            : message
+          /insufficient/i.test(message)
+            ? `${message} — need ${CHAIN_LABEL} ETH for price + gas.`
+            : /chain|network|switch/i.test(message)
+              ? `${message} — switch wallet to ${CHAIN_LABEL} (${marketplaceChain.id}).`
+              : message
         )
       }
     } finally {
@@ -197,14 +222,18 @@ export default function MarketplacePage() {
     await ensureWallet()
     if (!account?.address) {
       setError(
-        "Connect a wallet on Sepolia to list. You must own the NFT and approve the marketplace to transfer it."
+        `Connect a wallet on ${CHAIN_LABEL}. You must own the NFT and approve the marketplace to transfer it.`
       )
       return
     }
 
     const { assetContract, tokenId, price } = listingForm
-    if (!assetContract || !tokenId || !price) {
-      setError("Fill in contract, token ID, and price.")
+    if (!assetContract?.trim() || !tokenId?.trim() || !price?.trim()) {
+      setError("Fill in NFT contract address, token ID, and price.")
+      return
+    }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(assetContract.trim())) {
+      setError("NFT contract address must be a valid 0x address (40 hex chars).")
       return
     }
 
@@ -215,18 +244,18 @@ export default function MarketplacePage() {
       const now = Math.floor(Date.now() / 1000)
       const tx = createListing({
         contract: marketplace,
-        assetContractAddress: assetContract as `0x${string}`,
-        tokenId: BigInt(tokenId),
+        assetContractAddress: assetContract.trim() as `0x${string}`,
+        tokenId: BigInt(tokenId.trim()),
         quantity: 1n,
         currencyContractAddress: NATIVE_TOKEN_ADDRESS,
-        pricePerToken: price,
+        pricePerToken: price.trim(),
         startTimestamp: new Date(now * 1000),
         endTimestamp: new Date((now + 60 * 60 * 24 * 30) * 1000),
         isReservedListing: false,
       })
       await sendTx(tx)
       setStatusMsg(
-        "Listing created. If the tx asked for NFT approval first, confirm that, then list again if needed."
+        "Listing submitted. If your wallet asked for NFT approval first, confirm that, then list again if needed."
       )
       setListingForm({ assetContract: "", tokenId: "", price: "" })
       await loadListings()
@@ -234,11 +263,13 @@ export default function MarketplacePage() {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to create listing"
-      if (!message.toLowerCase().includes("reject")) {
+      if (!/reject|denied|cancel/i.test(message)) {
         setError(
           /approv|allowance|owner/i.test(message)
-            ? `${message} — approve the marketplace contract on the NFT, then retry.`
-            : message
+            ? `${message} — approve the marketplace (${shortAddr(MARKETPLACE_ADDRESS)}) on the NFT, then retry.`
+            : /chain|network|switch/i.test(message)
+              ? `${message} — switch wallet to ${CHAIN_LABEL}.`
+              : message
         )
       }
     } finally {
@@ -264,10 +295,11 @@ export default function MarketplacePage() {
               Marketplace contract not configured
             </p>
             <p className="mt-2 text-sm text-slate-400">
-              Add these env vars on Vercel (or locally) and redeploy.
+              Add these env vars on Vercel and redeploy.
             </p>
             <pre className="mt-4 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-300">
-{`VITE_MARKETPLACE_ADDRESS=0x...\nVITE_MARKETPLACE_CHAIN_ID=11155111`}
+{`VITE_MARKETPLACE_ADDRESS=0xD5567ec428f85D09434e8c54082CCCa29e990A0C
+VITE_MARKETPLACE_CHAIN_ID=84532`}
             </pre>
           </div>
         </div>
@@ -285,7 +317,7 @@ export default function MarketplacePage() {
           className="pointer-events-none absolute inset-0 opacity-90"
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99,102,241,0.22), transparent 55%), radial-gradient(ellipse 45% 40% at 95% 15%, rgba(168,85,247,0.1), transparent 50%)",
+              "radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99,102,241,0.22), transparent 55%), radial-gradient(ellipse 45% 40% at 95% 15%, rgba(0,82,255,0.12), transparent 50%)",
           }}
         />
         <div className="relative mx-auto max-w-[1400px] px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
@@ -293,14 +325,14 @@ export default function MarketplacePage() {
             <div className="max-w-2xl">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/50 px-3 py-1 text-[11px] font-medium text-slate-300 backdrop-blur">
                 <ShoppingBag className="size-3.5 text-indigo-400" />
-                Marketplace · Sepolia
+                Marketplace · {CHAIN_LABEL}
               </div>
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Buy &amp; list NFTs on-chain
               </h1>
               <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400">
-                MarketplaceV3 on Sepolia. Browse active listings, buy with one
-                click, or list an NFT you own — wallet approval required.
+                MarketplaceV3 on {CHAIN_LABEL}. Browse active listings, buy with
+                one click, or list an NFT you own — wallet approval required.
               </p>
               <p className="mt-2 font-mono text-[11px] text-slate-500">
                 {shortAddr(MARKETPLACE_ADDRESS)} · chain {marketplaceChain.id}
@@ -371,7 +403,7 @@ export default function MarketplacePage() {
                   )}
                 >
                   {t.label}
-                  {"count" in t && t.count && (
+                  {"count" in t && t.count !== undefined && (
                     <span
                       className={cn(
                         "rounded-full px-1.5 py-0.5 text-[10px]",
@@ -399,9 +431,10 @@ export default function MarketplacePage() {
                 Wallet required for buy &amp; list
               </p>
               <p className="text-xs text-indigo-200/90">
-                Connect a wallet on <strong>Sepolia</strong>. Listing needs NFT
-                ownership and a one-time approval so the marketplace can
-                transfer the token. Buying needs Sepolia ETH for price + gas.
+                Connect a wallet on <strong>{CHAIN_LABEL}</strong> (chain id{" "}
+                {marketplaceChain.id}). Listing needs NFT ownership and a
+                one-time approval so the marketplace can transfer the token.
+                Buying needs {CHAIN_LABEL} ETH for price + gas.
               </p>
               {user && !profile?.walletAddress && (
                 <p className="text-xs text-indigo-200/80">
@@ -462,7 +495,7 @@ export default function MarketplacePage() {
                 </div>
               </div>
 
-              {loading && !listings.length ? (
+              {loading && listings.length === 0 ? (
                 <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-800 bg-slate-900/30 py-20 text-sm text-slate-500">
                   <Loader2 className="size-4 animate-spin" />
                   Loading listings…
@@ -478,7 +511,7 @@ export default function MarketplacePage() {
                   <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-slate-500">
                     {query
                       ? "Try a different name, seller, or token ID."
-                      : "Use List NFT with an NFT you own on Sepolia. Your wallet will prompt to approve the marketplace, then confirm the listing."}
+                      : `Use List NFT with an NFT you own on ${CHAIN_LABEL}. Your wallet will prompt to approve the marketplace, then confirm the listing.`}
                   </p>
                   {!query && (
                     <Button
@@ -563,9 +596,11 @@ export default function MarketplacePage() {
                     <Tag className="size-4" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-white">List an NFT</h2>
+                    <h2 className="text-sm font-semibold text-white">
+                      List an NFT
+                    </h2>
                     <p className="text-[11px] text-slate-500">
-                      Own it on Sepolia · fixed price
+                      Own it on {CHAIN_LABEL} · fixed price
                     </p>
                   </div>
                 </div>
@@ -607,7 +642,7 @@ export default function MarketplacePage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs text-slate-400">
-                      Price (Sepolia ETH)
+                      Price ({CHAIN_LABEL} ETH)
                     </Label>
                     <Input
                       value={listingForm.price}
@@ -623,7 +658,7 @@ export default function MarketplacePage() {
                     />
                   </div>
                   <p className="text-[10px] leading-relaxed text-slate-500">
-                    Wallet must own the NFT. First tx may be an{" "}
+                    Wallet must own the NFT on {CHAIN_LABEL}. First tx may be an{" "}
                     <span className="text-slate-400">approval</span>; second
                     creates the listing.
                   </p>
@@ -649,15 +684,29 @@ export default function MarketplacePage() {
                 <p className="mt-2 break-all font-mono text-[11px] text-slate-300">
                   {MARKETPLACE_ADDRESS}
                 </p>
-                <a
-                  href={`https://thirdweb.com/${marketplaceChain.id}/${MARKETPLACE_ADDRESS}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:underline"
-                >
-                  Open in thirdweb
-                  <ExternalLink className="size-3" />
-                </a>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {CHAIN_LABEL} · {marketplaceChain.id}
+                </p>
+                <div className="mt-3 flex flex-col gap-2">
+                  <a
+                    href={`https://thirdweb.com/${marketplaceChain.id}/${MARKETPLACE_ADDRESS}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:underline"
+                  >
+                    Open in thirdweb
+                    <ExternalLink className="size-3" />
+                  </a>
+                  <a
+                    href={`${EXPLORER_BASE}/address/${MARKETPLACE_ADDRESS}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 hover:underline"
+                  >
+                    View on explorer
+                    <ExternalLink className="size-3" />
+                  </a>
+                </div>
               </div>
             </aside>
           )}
